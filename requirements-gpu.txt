@@ -4,5 +4,5 @@ sklearn
 numpy
 keras
 h5py
-tensorflow
 nltk
+tensorflow-gpu

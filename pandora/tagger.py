@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-import cPickle as pickle
+import pickle
 import os
 import codecs
 import shutil
@@ -20,17 +20,18 @@ from sklearn.manifold import TSNE
 import keras.backend as K
 from keras.utils import np_utils
 from keras.models import model_from_json
+from keras import backend as K
 
 import editdistance
 
-import utils
-import evaluation
-from model import build_model
-from preprocessing import Preprocessor
-from pretraining import Pretrainer
+import pandora.utils as utils
+import pandora.evaluation as evaluation
+from pandora.model import build_model
+from pandora.preprocessing import Preprocessor
+from pandora.pretraining import Pretrainer
+
 
 class Tagger():
-
     def __init__(self,
                  config_path=None,
                  nb_encoding_layers = 1,
@@ -58,6 +59,7 @@ class Tagger():
                  halve_lr_at = 10,
                  max_token_len = None,
                  min_lem_cnt = 1,
+                 overwrite=None
                  ):
         
         if load:
@@ -123,6 +125,11 @@ class Tagger():
             self.halve_lr_at = int(param_dict['halve_lr_at'])
             self.max_token_len = int(param_dict['max_token_len'])
             self.min_lem_cnt = int(param_dict['min_lem_cnt'])
+
+        if overwrite is not None:
+            # Overwrite should be a dict of attributes to change value of the trainer
+            for key, value in overwrite.items():
+                self.__setattr__(key, value)
         
         # create a models directory if it isn't there already:
         if not os.path.isdir(self.model_dir):
@@ -405,10 +412,9 @@ class Tagger():
         # save architecture:
         json_string = self.model.to_json()
         with open(os.sep.join((self.model_dir, 'model_architecture.json')), 'wb') as f:
-            f.write(json_string)
+            f.write(json_string.encode())
         # save weights:
-        self.model.save_weights(os.sep.join((self.model_dir, 'model_weights.hdf5')), \
-                overwrite=True)
+        self.model.save_weights(os.sep.join((self.model_dir, 'model_weights.hdf5')), overwrite=True)
         # save preprocessor:
         with open(os.sep.join((self.model_dir, 'preprocessor.p')), 'wb') as f:
             pickle.dump(self.preprocessor, f)
@@ -496,7 +502,7 @@ class Tagger():
         if self.curr_nb_epochs and self.halve_lr_at:
             # update learning rate at specific points:
             if self.curr_nb_epochs % self.halve_lr_at == 0:
-                old_lr  = K.get_value(self.model.optimizer.lr)
+                old_lr = K.get_value(self.model.optimizer.lr)
                 new_lr = np.float32(old_lr * 0.5)
                 K.set_value(self.model.optimizer.lr, new_lr)
                 print('\t- Lowering learning rate > was:', old_lr, ', now:', new_lr)
