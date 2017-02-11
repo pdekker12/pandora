@@ -50,8 +50,9 @@ pip install -r requirements.txt
 
 ```bash
 python main.py --help
-python main.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources
-python main.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources --nb_epochs 1
+python main.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources
+python main.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources --nb_epochs 1
+python main.py path/to/model/config.txt --load --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources
 ```
 
 #### unseen.py
