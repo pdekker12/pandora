@@ -28,6 +28,79 @@ def build_model(token_len, token_char_vector_dict,
                 focus_repr = 'recurrent',
                 dropout_level = .15,
                 ):
+    """Defines and compiles a Keras model.
+
+    Parameters
+    ===========
+    token_len : int
+        Character-length to which all tokens
+        have been uniformized (through truncation
+        or padding with zeros).
+    token_char_vector_dict : dict
+        The lookup dict used for the (one-hot)
+        indexation of the token characters.
+    nb_encoding_layers : int
+        The number of encoding layers, e.g. for 
+        the encoding LSTM.
+    nb_dense_dims : int
+        The dimensionality of the hidden layers;
+        both for the recurrent layers and the 
+        latent representation.
+    lemma_len : int
+        Character-length to which all lemmas
+        have been uniformized (through truncation
+        or padding with zeros).
+    lemma_char_vector_dict : dict
+        The lookup dict used for the (one-hot)
+        indexation of the lemma characters.
+    nb_tags : int
+        Number of distinct pos tags in classification.
+    nb_morph_cats : int
+        Number of distinct morphological tags in
+        classifcation.
+    nb_lemmas : int
+        Number of distinct lemma tags in classification.
+    nb_train_tokens : int
+        Number of distinct input tokens.
+    include_token : bool
+        Whether to include an embedding representation
+        of the original input tokens
+    include_context : bool
+        Whether to include an embedding representation
+        of the context tokens surrounding the original
+        focus token.
+    include_lemma : bool
+        Whether to include a prediction of the lemma
+    include_pos : bool
+        Whether to include a prediction of the pos tag
+    include_morph : bool
+        Whether to include a prediction of morphological tags
+    nb_context_tokens : int
+        Total number of context tokens (left + right) which
+        will be included in the token representations.
+    nb_embedding_dims : int
+        Dimensionality of the embedding vectors used for the
+        representation of focus and context tokens.
+    pretrained_embeddings : array-like
+        If not None, this is place to pass pretrained embedding
+        vectors as a numpy-array to the model, with a shape
+        corresponding to: (nb_tokens, dimensionality).
+    nb_filters : int
+        Size of the convolutional, ngram-like filters to apply
+        when `focus_repr` is 'convolutional'. The stride is 
+        always set to 1.
+    focus_repr = str ('convolutional' or 'recurrent')
+        Whether to use a 'convolutional' token representation
+        or a 'recurrent' representation using a bidirectional LSTM.
+    dropout_level : float (default = .15)
+        A float between 0 and 1 expressing the dropout value used
+        during training. Affects various layers: consult the model
+        definition.
+
+    Returns
+    ===========
+        Compiled keras model, ready for training/testing.
+    """
     
     inputs, outputs = [], []
     subnets = []
