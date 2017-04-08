@@ -12,7 +12,39 @@ import numpy as np
 
 from pandora.model import build_model
 
-def index_characters(tokens, focus_repr='recurrent', v2u=False):
+def index_characters(tokens, focus_repr='recurrent',
+                     v2u=False):
+    """Creates a character index for representing 
+       tokens at the character level. All tokens 
+       will be lowercased. 
+
+    Parameters
+    ===========
+    tokens : list of str
+        A list of tokens, on the basis of which the
+        index will be constructed.
+    focus_repr = str ('recurrent', 'convolutional')
+        Which representation model will be used. in
+        the case of recurrent representation, the 
+        following special symbols are added to the
+        character vocabulary: ['$', '|', '%'].
+
+    v2u : bool (default: False)
+        Whether to squash the 'v' and 'u' characters
+        to the same index. Useful for some historic
+        languages.
+
+    Returns
+    ===========
+    char_vector_dict : dict
+        A index dict with all characters used in the 
+        instances: {char1 : idx1, char2 : idx2, ...}
+    char_idx : list
+        An array of characters, where each character
+        occupies the index which it was assigned in 
+        `char_vector_dict`.
+
+    """
     if v2u:
         vocab = {ch for tok in tokens for ch in tok.lower().replace('v', 'u')}
     else:
@@ -33,8 +65,44 @@ def index_characters(tokens, focus_repr='recurrent', v2u=False):
 
     return char_vector_dict, char_idx
 
-def vectorize_tokens(tokens, char_vector_dict, focus_repr,
-                     max_len=15, v2u=False):
+def vectorize_tokens(tokens, char_vector_dict,
+                     focus_repr, max_len=15,
+                     v2u=False):
+
+    """Converts tokens to a tensor-representation
+       at the character level. All tokens will be
+       lowercased. 
+
+    Parameters
+    ===========
+    tokens : list of str
+        A list of tokens to convert to a 3D tensor-
+        representation.
+    char_vector_dict : dict
+        A dict used for indexing the characters:
+        {char1 : idx1, char2 : idx2, ...}.
+    max_len : int (default = 15)
+        The length to which all tokens will be uni-
+        formized (through right-side truncation or
+        right)side padding with zeros).
+    focus_repr = str ('recurrent', 'convolutional')
+        Which representation model will be used. in
+        the case of recurrent representation, the 
+        following special symbols are added to the
+        character vocabulary: ['$', '|', '%'].
+    v2u : bool (default: False)
+        Whether to squash the 'v' and 'u' characters
+        to the same index. Useful for some historic
+        languages.
+
+    Returns
+    ===========
+    X : array-like (float32)
+        A 3D tensor-representation of the tokens,
+        with shape:
+        (nb tokens, max len, nb characters).
+
+    """
     X = []
     for token in tokens:
         token = token.lower()
@@ -51,6 +119,40 @@ def vectorize_tokens(tokens, char_vector_dict, focus_repr,
 
 def vectorize_lemmas(lemmas, char_vector_dict,
                      max_len=15):
+    
+    """Converts lemmas to a tensor-representation
+       at the character level. All lemmas will be
+       lowercased. 
+
+    Parameters
+    ===========
+    lemmas : list of str
+        A list of lemmas to convert to a 3D tensor-
+        representation.
+    char_vector_dict : dict
+        A dict used for indexing the characters:
+        {char1 : idx1, char2 : idx2, ...}.
+    max_len : int (default = 15)
+        The length to which all lemmas will be uni-
+        formized (through right-side truncation or
+        right-side padding with zeros).
+    focus_repr = str ('recurrent', 'convolutional')
+        Which representation model will be used. in
+        the case of recurrent representation, the 
+        following special symbols are added to the
+        character vocabulary:
+            - '$': padding symbol
+            - '|': end of sequence
+            - '%': beginning of sequence.
+
+    Returns
+    ===========
+    X : array-like (float32)
+        A 3D tensor-representation of the lemmas,
+        with shape:
+        (nb lemmas, max len, nb characters).
+
+    """
     X = []
     for lemma in lemmas:
         lemma = lemma.lower()
@@ -60,15 +162,54 @@ def vectorize_lemmas(lemmas, char_vector_dict,
         X.append(x)
 
     X = np.asarray(X, dtype='float32')
+
     return X
 
-def vectorize_token(seq, char_vector_dict, max_len, focus_repr):
+def vectorize_token(seq, char_vector_dict,
+                    max_len, focus_repr):
+    """Converts a single token to a matrix-
+       representation at the character level.
+       All characters will be lowercased. 
+
+    Parameters
+    ===========
+    seq : str
+        A string representing the token.
+    char_vector_dict : dict
+        A dict used for indexing the characters:
+        {char1 : idx1, char2 : idx2, ...}.
+    max_len : int (default = 15)
+        The length to which all tokens will be uni-
+        formized (through right-side truncation or
+        right-side padding with zeros).
+    focus_repr = str ('recurrent', 'convolutional')
+        Which representation model will be used. in
+        the case of recurrent representation, the 
+        following special symbols are added to the
+        character vocabulary:
+            - '$': padding symbol
+            - '|': end of sequence
+            - '%': beginning of sequence.
+
+    Returns
+    ===========
+    X : array-like (float32)
+        A 2D tensor-representation of the lemmas,
+        with shape:
+        (max len, nb characters).
+
+    Notes
+    ===========
+    In the case of recurrent representation, the
+    input sequence of characters will be reversed.
+
+    """
 
     if focus_repr == 'recurrent':
         # cut, if needed:
         seq = seq[:(max_len - 2)]
         seq = '%' + seq + '|'
-        seq = seq[::-1] # reverse order (cf. paper)!
+        seq = seq[::-1] # reverse order
     elif focus_repr == 'convolutions':
         seq = seq[:max_len]
 
@@ -87,6 +228,29 @@ def vectorize_token(seq, char_vector_dict, max_len, focus_repr):
     return np.array(seq_X, dtype='float32')
 
 def vectorize_lemma(seq, char_vector_dict, max_len):
+    """Converts a single lemma to a matrix-
+       representation at the character level.
+       All characters will be lowercased. 
+
+    Parameters
+    ===========
+    seq : str
+        A string representing the lemma.
+    char_vector_dict : dict
+        A dict used for indexing the characters:
+        {char1 : idx1, char2 : idx2, ...}.
+    max_len : int (default = 15)
+        The length to which the lemma will be uni-
+        formized (through right-side truncation or
+        right-side padding with zeros).
+    Returns
+    ===========
+    X : array-like (float32)
+        A 3D tensor-representation of the lemmas,
+        with shape:
+        (max len, nb characters).
+
+    """
     # cut, if needed:
     seq = seq[:(max_len - 2)]
     seq = '%'+seq+'|'
@@ -107,6 +271,39 @@ def vectorize_lemma(seq, char_vector_dict, max_len):
     return np.array(seq_X, dtype='float32')
 
 def parse_morphs(morph):
+    """Parses the strings representing morphological
+       tags into a series of dictionaries, e.g.
+       [
+         gender=NEUTER|case=NOMINATIVE|number=SINGULAR|degree=POSITIVE,
+         number=SINGULAR|person=PERSON_3|mood=INDICATIVE|voice=ACTIVE|tense=PRESENT,
+         _,
+         gender=MASCULINE|case=ACCUSATIVE|number=PLURAL,
+         ...
+        ]
+
+    Parameters
+    ===========
+    morph : list of str
+        A list of strings with morphological tags.
+        Conventions:
+            * key and value linked by '='
+            * tags separated by pipes ('|')
+    char_vector_dict : dict
+        A dict used for indexing the characters:
+        {char1 : idx1, char2 : idx2, ...}.
+    max_len : int (default = 15)
+        The length to which the lemma will be uni-
+        formized (through right-side truncation or
+        right-side padding with zeros).
+    
+    Returns
+    ===========
+    morph_dicts : list of dicts
+        A list of dictionaries representing the 
+        morphological tags for each item.
+
+    """
+
     morph_dicts = []
     for ml in morph:
         d = {}
@@ -117,10 +314,17 @@ def parse_morphs(morph):
         except ValueError:
             pass
         morph_dicts.append(d)
+
     return morph_dicts
 
 
 class Preprocessor():
+    """
+    Takes care of all preprocessing for Pandora,
+    including creating the one-index for context
+    tokens (embeddings) and creating the character-
+    level representations of input and output labels.
+    """
 
     def __init__(self):
         pass
@@ -128,6 +332,52 @@ class Preprocessor():
     def fit(self, tokens, lemmas, pos, morph, include_lemma,
             include_morph, focus_repr, max_token_len = None,
             min_lem_cnt = 1):
+
+        """Fits the prepocessor on annotated materials.
+           * Although tokens, lemmas and pos are optional,
+             at least one of them must be included. Tokens
+             are non-optional.
+           * Out of vocabulary items are modelled using
+             the '<UNK>' symbol.
+
+
+        Parameters
+        ===========
+        tokens : list of str
+            A list of tokens.
+        lemmas : list of str (optional)
+            A list of lemmas
+        pos : list of str (optional)
+            A list of part-of-speech tags.
+        morph : list of str (optional)
+            A list of morphological tags.
+        include_lemma : str ('generate' or 'label')
+            Indicates whether lemmas will be
+            obtained through classification ('label')
+            or character-level generation ('generate')
+        include_moprh : str ('label' or 'multilabel')
+            Indicate whether the morphological prediction
+            uses hardcare single-label classification,
+            or a subtag level multilabel approach.
+        focus_repr = str ('recurrent', 'convolutional')
+            Which representation model will be used:
+            concolutional filters ('convolutional') or
+            a bidirectional LSTM ('recurrent').
+        max_token_len : int
+            The length (in characters) to which all tokens
+            will be uniformized (through padding and cutting).
+            (Note that the maximum length of the lemmas is
+            automatically inferred from the maximum lemma
+            length observed.)
+        min_lem_cnt = int (default: 1)
+            The minimum number of attestions a lemma label
+            have to be assigned its own classification label
+            in the case of `include_lemma` = 'label'.
+
+        Returns
+        ===========
+            Itself.
+        """
         
         if max_token_len:
             self.max_token_len = max_token_len
@@ -186,6 +436,34 @@ class Preprocessor():
 
     def transform(self, tokens=None, lemmas=None,
                   pos=None, morph=None):
+        """ Transforms a list of corresponding tokens,
+            lemmas, pos tags and morph tags to the correct
+            feature representations. This method will encode
+            out-of-vocabulary items using special symbols to
+            prevent sublt leakage from test to train material.
+
+        Parameters
+        ===========
+        tokens : list of str
+            A list of tokens.
+        lemmas : list of str (optional)
+            A list of lemmas
+        pos : list of str (optional)
+            A list of part-of-speech tags.
+        morph : list of str (optional)
+            A list of morphological tags.
+        
+
+        Returns
+        ===========
+            returnables : dict
+            Depending on the preprocessor's parametrization,
+            a dict with keys {'X_focus' : token representation,
+                              'X_lemma' : lemma representation,
+                              'X_pos' : pos representation,
+                              'X_morph' : pos representation}
+        """
+
         # vectorize focus tokens:
         X_focus = vectorize_tokens(\
                     tokens=tokens,
@@ -242,25 +520,53 @@ class Preprocessor():
         return returnables
 
     def fit_transform(self, tokens, lemmas, pos, morph):
+
+        """Commodity function, equivalent to:
+            self.transform(self.fit(...))
+        """
+
         self.fit(tokens, lemmas, pos, morph)
         return self.transform(tokens, lemmas, pos, morph)
 
 
     def inverse_transform_lemmas(self, predictions):
+        """Converts the model's lemma predictions to
+           a human-readable list of lemma labels.
+            * In the case of include_lemma = 'generate',
+              a matrix-like representation of lemma outputs
+              (generated at the character level) is converted
+              to strings. Technical note: no beam-search is applied;
+              we apply a hardcore maxarg. See code for details.
+            * In the case of include_lemma = 'label',
+              an index of lemma predictions is converted
+              to their corresponding labels.
+
+
+        Parameters
+        ===========
+        predictions : list
+            - list of lemma-indices (`include_lemma` = 'label')
+            - list of lemma-matrices at character-level (when
+              `include_lemma` = 'generate').
+
+
+        Returns
+        ===========
+            The lemma predictions as a list of strings.
         """
-        For each prediction, convert 2D char matrix
-        with probabilities to actual lemmas, using
-        character index for the output strings.
-        """
+        
         pred_lemmas = []
         if self.include_lemma == 'generate':
             for pred in predictions:
                 pred_lem = ''
                 for positions in pred:
-                    top_idx = np.argmax(positions) # winning position
-                    c = self.lemma_char_idx[top_idx] # look up corresponding char
+                    # winning position
+                    top_idx = np.argmax(positions)
+                    # look up corresponding char
+                    c = self.lemma_char_idx[top_idx]
                     if c in ('$', '%'):
                         continue
+                    # truncate once padding is generated
                     if c == '|':
                         break
                     else:
@@ -274,15 +580,39 @@ class Preprocessor():
         return pred_lemmas
 
     def inverse_transform_pos(self, predictions):
-        """
+        """Converts index-predictions of part of speech tags
+           and converts them to string labels.
+
+        Parameters
+        ===========
+        predictions : list of ints
+            A iterable of indices corresponding to pos
+            prediction labels.
+
+        Returns
+        ===========
+            The pos predictions as a list of strings.
         """
         predictions = np.argmax(predictions, axis=1)
         return self.pos_encoder.inverse_transform(predictions)
 
     def inverse_transform_morph(self, predictions, threshold=.5):
-        """
-        Only select highest activation per category, if that max
-        is above threshold.
+        """Converts morphological predictions to a list of human-
+           readable morphological tags.
+        
+        Parameters
+        ===========
+        predictions : list
+            A iterable of indices corresponding to morphological
+            prediction labels.
+        threshold : float (default = .5)
+            In the case of the 'multilabel' setup, only 
+            labels with a softmax probability >= `threshold` are
+            included.
+
+        Returns
+        ===========
+            The morphological predictions as a list of strings.
         """
         if self.include_morph == 'label':
             predictions = np.argmax(predictions, axis=1)
