@@ -7,12 +7,41 @@ from collections import Counter
 from operator import itemgetter
 import numpy as np
 
-def single_label_accuracies(gold, silver, test_tokens, known_tokens,
+def single_label_accuracies(gold, silver,
+                            test_tokens, known_tokens,
                             print_scores=True):
+    """Calculate accuracy scores, assuming a single-label setup.
+       Single-label accuracies are calculated for all tokens, as
+       well as the unknown and known tokens separately. A known
+       token is considered a token which has been encountered
+       verbatimly during training.
+
+    Parameters
+    ===========
+    gold : list of str
+        The correct labels
+    silver : list of str
+        The predicted labels
+    test_tokens : list of str
+        The original tokens corresponding to
+        the list of gold/silver labels.
+    known_tokens : set of str
+        A set of tokens which were met verbatimly
+        during training (cf. known vs unknown tokens)
+    print_scores : bool (default: True)
+        Whether to print the scores (on top of
+        returning them)
+
+    Returns
+    ===========
+    results : tuple
+        A 3-tuple of the:
+            * overall accuracy
+            * known tokens accuracy
+            * unknown tokens accuracy
+
     """
-    Calculate accuracies for all, known and unknown tokens.
-    Uses index of items seen during training.
-    """
+    
     kno_corr, unk_corr = 0.0, 0.0
     nb_kno, nb_unk = 0.0, 0.0
 
@@ -42,11 +71,42 @@ def single_label_accuracies(gold, silver, test_tokens, known_tokens,
 
     return all_acc, kno_acc, unk_acc
 
-def multilabel_accuracies(gold, silver, test_tokens, known_tokens,
+def multilabel_accuracies(gold, silver,
+                          test_tokens, known_tokens,
                           print_scores=True):
-    """
-    Calculate accuracies for all, known and unknown tokens.
-    Uses index of items seen during training.
+
+    """Calculate accuracy scores, assuming a multi-label setup.
+       Especially useful for calculating scores on complex morpho-
+       logical tags. Multi-label accuracies are calculated for
+       all tokens, as well as the unknown and known tokens
+       separately. A known token is considered a token which has
+       been encountered verbatimly during training.
+       Note: sublabels are expected to be splitted using pipes.
+
+    Parameters
+    ===========
+    gold : list of str
+        The correct labels
+    silver : list of str
+        The predicted labels
+    test_tokens : list of str
+        The original tokens corresponding to
+        the list of gold/silver labels.
+    known_tokens : set of str
+        A set of tokens which were met verbatimly
+        during training (cf. known vs unknown tokens)
+    print_scores : bool (default: True)
+        Whether to print the scores (on top of
+        returning them)
+
+    Returns
+    ===========
+    results : tuple
+        A 3-tuple of the:
+            * overall accuracy
+            * known tokens accuracy
+            * unknown tokens accuracy
+
     """
     kno_corr, unk_corr = 0.0, 0.0
     nb_kno, nb_unk = 0.0, 0.0
