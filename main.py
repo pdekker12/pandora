@@ -18,7 +18,7 @@ def main(config, train, dev, test=None, load=False, **kwargs):
     :type dev: str
     :param test: Path to directory containing train files
     :type test: str
-    :param load: Whether to load an existing model to train on top of it (default: False
+    :param load: Whether to load an existing model to train on top of it (default: False)
     :type load: bool
     :param nb_epochs: Number of epoch
     :type nb_epochs: int
