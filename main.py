@@ -7,7 +7,7 @@ import pandora.utils
 from pandora.tagger import Tagger
 
 
-def main(config, train, dev, test=None, load=False, **kwargs):
+def main(config, train, dev, test=None, load=False, verbose=True, **kwargs):
     """ Main CLI Interface
 
     :param config: Path to retrieve configuration file
@@ -29,7 +29,7 @@ def main(config, train, dev, test=None, load=False, **kwargs):
     print('::: started :::')
     params = pandora.utils.get_param_dict(config)
     params['config_path'] = config
-    params.update({k: v for k,v in kwargs.items() if v is not None})
+    params.update({k: v for k, v in kwargs.items() if v is not None})
     print("::: Loaded Config :::")
     for k, v in params.items():
         print("\t{} : {}".format(k, v))
@@ -81,11 +81,16 @@ def main(config, train, dev, test=None, load=False, **kwargs):
     else:
         tagger = Tagger(**params)
         tagger.setup_to_train(**data_sets)
-    
-    for i in range(int(params['nb_epochs'])):
-        tagger.epoch(autosave=True)
+
+    nb_epochs = int(params['nb_epochs'])
+    for i in range(nb_epochs):
+        if i == 0 or i == nb_epochs - 1:
+            curr_verbose = True
+        else:
+            curr_verbose = verbose
+        tagger.epoch(verbose=curr_verbose, autosave=True)
         if test is not None:
-            tagger.test()
+            tagger.test(verbose=curr_verbose)
 
     tagger.save()
     print('::: ended :::')
@@ -104,6 +109,13 @@ if __name__ == '__main__':
         action="store_true", 
         default=False,
         help="Whether to load an existing model to train on top of it (default: False)"
+    )
+    parser.add_argument(
+        "--silent",
+        dest="verbose",
+        action="store_false",
+        default=True,
+        help="Stop printing results at each epoch"
     )
 
     main(**vars(parser.parse_args()))
