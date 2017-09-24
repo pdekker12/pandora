@@ -5,7 +5,8 @@ from __future__ import print_function
 import argparse
 import pandora.utils
 from pandora.tagger import Tagger
-
+import os
+import shutil
 
 def main(config, train, dev, test=None, load=False, verbose=True, **kwargs):
     """ Main CLI Interface
@@ -74,7 +75,10 @@ def main(config, train, dev, test=None, load=False, verbose=True, **kwargs):
     if load:
         print('::: loading model :::')
         tagger = Tagger(load=True, model_dir=params['model_dir'])
-        tagger.setup_to_train(build=False, **kwargs)
+        if tagger.config_path == os.sep.join((tagger.model_dir, 'config.txt')):
+            shutil.copy(tagger.config_path, os.sep.join((tagger.model_dir, 'config_original.txt')))
+            print('Warning: current config file will be overwritten. Saving it to config_original.txt')
+        tagger.setup_to_train(build=False, **data_sets)
         tagger.curr_nb_epochs = int(params['curr_nb_epochs'])
         print("restart from epoch "+str(tagger.curr_nb_epochs)+"...")
         tagger.setup = True

@@ -454,38 +454,39 @@ class Tagger():
             with open(os.sep.join((self.model_dir, 'known_lemmas.p')), 'wb') as f:
                 pickle.dump(self.known_lemmas, f)
         # save config file:
-        if self.config_path:
+        #JBC: commented out, to allow saving from actual parameters
+        #if self.config_path:
             # make sure that we can reproduce parametrization when reloading:
-            if not self.config_path == os.sep.join((self.model_dir, 'config.txt')):
-                shutil.copy(self.config_path, os.sep.join((self.model_dir, 'config.txt')))
-        else:
-            with open(os.sep.join((self.model_dir, 'config.txt')), 'w') as F:
-                F.write('# Parameter file\n\n[global]\n')
-                F.write('nb_encoding_layers = '+str(self.nb_encoding_layers)+'\n')
-                F.write('nb_dense_dims = '+str(self.nb_dense_dims)+'\n')
-                F.write('batch_size = '+str(self.batch_size)+'\n')
-                F.write('nb_left_tokens = '+str(self.nb_left_tokens)+'\n')
-                F.write('nb_right_tokens = '+str(self.nb_right_tokens)+'\n')
-                F.write('nb_embedding_dims = '+str(self.nb_embedding_dims)+'\n')
-                F.write('model_dir = '+str(self.model_dir)+'\n')
-                F.write('postcorrect = '+str(self.postcorrect)+'\n')
-                F.write('nb_filters = '+str(self.nb_filters)+'\n')
-                F.write('filter_length = '+str(self.filter_length)+'\n')
-                F.write('focus_repr = '+str(self.focus_repr)+'\n')
-                F.write('dropout_level = '+str(self.dropout_level)+'\n')
-                F.write('include_token = '+str(self.include_context)+'\n')
-                F.write('include_context = '+str(self.include_context)+'\n')
-                F.write('include_lemma = '+str(self.include_lemma)+'\n')
-                F.write('include_pos = '+str(self.include_pos)+'\n')
-                F.write('include_morph = '+str(self.include_morph)+'\n')
-                F.write('include_dev = '+str(self.include_dev)+'\n')
-                F.write('include_test = '+str(self.include_test)+'\n')
-                F.write('nb_epochs = '+str(self.nb_epochs)+'\n')
-                F.write('halve_lr_at = '+str(self.halve_lr_at)+'\n')
-                F.write('max_token_len = '+str(self.max_token_len)+'\n')
-                F.write('min_token_freq_emb = '+str(self.min_token_freq_emb)+'\n')
-                F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
-                F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
+        #    if not self.config_path == os.sep.join((self.model_dir, 'config.txt')):
+        #        shutil.copy(self.config_path, os.sep.join((self.model_dir, 'config.txt')))
+        #else:
+        with open(os.sep.join((self.model_dir, 'config.txt')), 'w') as F:
+            F.write('# Parameter file\n\n[global]\n')
+            F.write('nb_encoding_layers = '+str(self.nb_encoding_layers)+'\n')
+            F.write('nb_dense_dims = '+str(self.nb_dense_dims)+'\n')
+            F.write('batch_size = '+str(self.batch_size)+'\n')
+            F.write('nb_left_tokens = '+str(self.nb_left_tokens)+'\n')
+            F.write('nb_right_tokens = '+str(self.nb_right_tokens)+'\n')
+            F.write('nb_embedding_dims = '+str(self.nb_embedding_dims)+'\n')
+            F.write('model_dir = '+str(self.model_dir)+'\n')
+            F.write('postcorrect = '+str(self.postcorrect)+'\n')
+            F.write('nb_filters = '+str(self.nb_filters)+'\n')
+            F.write('filter_length = '+str(self.filter_length)+'\n')
+            F.write('focus_repr = '+str(self.focus_repr)+'\n')
+            F.write('dropout_level = '+str(self.dropout_level)+'\n')
+            F.write('include_token = '+str(self.include_context)+'\n')
+            F.write('include_context = '+str(self.include_context)+'\n')
+            F.write('include_lemma = '+str(self.include_lemma)+'\n')
+            F.write('include_pos = '+str(self.include_pos)+'\n')
+            F.write('include_morph = '+str(self.include_morph)+'\n')
+            F.write('include_dev = '+str(self.include_dev)+'\n')
+            F.write('include_test = '+str(self.include_test)+'\n')
+            F.write('nb_epochs = '+str(self.nb_epochs)+'\n')
+            F.write('halve_lr_at = '+str(self.halve_lr_at)+'\n')
+            F.write('max_token_len = '+str(self.max_token_len)+'\n')
+            F.write('min_token_freq_emb = '+str(self.min_token_freq_emb)+'\n')
+            F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
+            F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
         
         # plot current embeddings:
         if self.include_context:
