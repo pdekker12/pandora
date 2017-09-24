@@ -357,7 +357,13 @@ class Tagger():
         print('Test stats:')
         utils.stats(tokens=self.test_tokens, lemmas=self.test_lemmas, known=self.preprocessor.known_tokens)
 
-    def test(self, multilabel_threshold=0.5):
+    def test(self, multilabel_threshold=0.5, verbose=True):
+        """ Run tests evaluation with prediction
+
+        :param multilabel_threshold:
+        :param verbose: Print all results
+        :return: Score Dictionary
+        """
         if not self.include_test:
             raise ValueError('Please do not call .test() if no test data is available.')
 
@@ -377,41 +383,57 @@ class Tagger():
             test_preds = [test_preds]
 
         if self.include_lemma:
-            print('::: Test scores (lemmas) :::')
+            if verbose:
+                print('::: Test scores (lemmas) :::')
             
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=test_preds[self.lemma_out_idx])
             if self.postcorrect:
                 for i in range(len(pred_lemmas)):
                     if pred_lemmas[i] not in self.known_lemmas:
-                        pred_lemmas[i] = min(self.known_lemmas,
-                                        key=lambda x: editdistance.eval(x, pred_lemmas[i]))
-            score_dict['test_lemma'] = evaluation.single_label_accuracies(gold=self.test_lemmas,
-                                                 silver=pred_lemmas,
-                                                 test_tokens=self.test_tokens,
-                                                 known_tokens=self.preprocessor.known_tokens)
+                        pred_lemmas[i] = min(self.known_lemmas, key=lambda x: editdistance.eval(x, pred_lemmas[i]))
+
+            score_dict['test_lemma'] = evaluation.single_label_accuracies(
+                gold=self.test_lemmas,
+                silver=pred_lemmas,
+                test_tokens=self.test_tokens,
+                known_tokens=self.preprocessor.known_tokens,
+                print_scores=verbose
+            )
 
         if self.include_pos:
-            print('::: Test scores (pos) :::')
+            if verbose:
+                print('::: Test scores (pos) :::')
             pred_pos = self.preprocessor.inverse_transform_pos(predictions=test_preds[self.pos_out_idx])
-            score_dict['test_pos'] = evaluation.single_label_accuracies(gold=self.test_pos,
-                                                 silver=pred_pos,
-                                                 test_tokens=self.test_tokens,
-                                                 known_tokens=self.preprocessor.known_tokens)
+            score_dict['test_pos'] = evaluation.single_label_accuracies(
+                gold=self.test_pos,
+                silver=pred_pos,
+                test_tokens=self.test_tokens,
+                known_tokens=self.preprocessor.known_tokens,
+                print_scores=verbose
+            )
         
-        if self.include_morph:     
-            print('::: Test scores (morph) :::')
-            pred_morph = self.preprocessor.inverse_transform_morph(predictions=test_preds[self.morph_out_idx],
-                                                                   threshold=multilabel_threshold)
+        if self.include_morph:
+            if verbose:
+                print('::: Test scores (morph) :::')
+
+            pred_morph = self.preprocessor.inverse_transform_morph(
+                predictions=test_preds[self.morph_out_idx],
+                threshold=multilabel_threshold
+            )
+            eval_call = None
             if self.include_morph == 'label':
-                score_dict['test_morph'] = evaluation.single_label_accuracies(gold=self.test_morph,
-                                                 silver=pred_morph,
-                                                 test_tokens=self.test_tokens,
-                                                 known_tokens=self.preprocessor.known_tokens)                
+                eval_call = evaluation.single_label_accuracies
             elif self.include_morph == 'multilabel':
-                score_dict['test_morph'] = evaluation.multilabel_accuracies(gold=self.test_morph,
-                                                 silver=pred_morph,
-                                                 test_tokens=self.test_tokens,
-                                                 known_tokens=self.preprocessor.known_tokens)
+                eval_call = evaluation.multilabel_accuracies
+
+            if eval_call is not None:
+                score_dict['test_morph'] = eval_call(
+                    gold=self.test_morph,
+                    silver=pred_morph,
+                    test_tokens=self.test_tokens,
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=verbose
+                )
         return score_dict
 
     def save(self):
@@ -498,7 +520,7 @@ class Tagger():
             sns.plt.savefig(os.sep.join((self.model_dir, 'embed_after.pdf')),
                             bbox_inches=0)
 
-    def epoch(self, autosave=True):
+    def epoch(self, autosave=True, verbose=True):
         if not self.setup:
             raise ValueError('Not set up yet... Call Tagger.setup_() first.')
 
@@ -527,18 +549,17 @@ class Tagger():
             train_out['pos_out'] = self.train_X_pos
         if self.include_morph:
             train_out['morph_out'] = self.train_X_morph
-        
-        self.model.fit(train_in, train_out,
-              nb_epoch = 1,
-              shuffle = True,
-              batch_size = self.batch_size)
 
-        # get train preds:
-        train_preds = self.model.predict(train_in,
-                                batch_size=self.batch_size)
+        # Train once
+        self.model.fit(train_in, train_out, nb_epoch=1, shuffle=True, batch_size=self.batch_size)
+
+        # Get train preds:
+        train_preds = self.model.predict(train_in, batch_size=self.batch_size)
         if isinstance(train_preds, np.ndarray):
             train_preds = [train_preds]
 
+        # Get dev preds
+        dev_preds = None
         if self.include_dev:
             dev_in = {}
             if self.include_token:
@@ -546,85 +567,140 @@ class Tagger():
             if self.include_context:
                 dev_in['context_in'] = self.dev_contexts
 
-            dev_preds = self.model.predict(dev_in,
-                                    batch_size=self.batch_size)
+            dev_preds = self.model.predict(dev_in, batch_size=self.batch_size)
             if isinstance(dev_preds, np.ndarray):
                 dev_preds = [dev_preds]
 
-        score_dict = {}
-        if self.include_lemma:
-            print('::: Train scores (lemmas) :::')
-            pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=train_preds[self.lemma_out_idx])
-            score_dict['train_lemma'] = evaluation.single_label_accuracies(gold=self.train_lemmas,
-                                                 silver=pred_lemmas,
-                                                 test_tokens=self.train_tokens,
-                                                 known_tokens=self.preprocessor.known_tokens)
-            if self.include_dev:
-                print('::: Dev scores (lemmas) :::')
-                pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=dev_preds[self.lemma_out_idx])
-                score_dict['dev_lemma'] = evaluation.single_label_accuracies(gold=self.dev_lemmas,
-                                                     silver=pred_lemmas,
-                                                     test_tokens=self.dev_tokens,
-                                                     known_tokens=self.preprocessor.known_tokens)
-                
-                if self.postcorrect:
-                    print('::: Dev scores (lemmas) -> postcorrected :::')
-                    for i in range(len(pred_lemmas)):
-                        if pred_lemmas[i] not in self.known_lemmas:
-                            pred_lemmas[i] = min(self.known_lemmas,
-                                            key=lambda x: editdistance.eval(x, pred_lemmas[i]))
-                    score_dict['dev_lemma_postcorrect'] = evaluation.single_label_accuracies(gold=self.dev_lemmas,
-                                                     silver=pred_lemmas,
-                                                     test_tokens=self.dev_tokens,
-                                                     known_tokens=self.preprocessor.known_tokens)
-
-        if self.include_pos:
-            print('::: Train scores (pos) :::')
-            pred_pos = self.preprocessor.inverse_transform_pos(predictions=train_preds[self.pos_out_idx])
-            score_dict['train_pos'] = evaluation.single_label_accuracies(gold=self.train_pos,
-                                                 silver=pred_pos,
-                                                 test_tokens=self.train_tokens,
-                                                 known_tokens=self.preprocessor.known_tokens)
-            if self.include_dev:
-                print('::: Dev scores (pos) :::')
-                pred_pos = self.preprocessor.inverse_transform_pos(predictions=dev_preds[self.pos_out_idx])
-                score_dict['dev_pos'] = evaluation.single_label_accuracies(gold=self.dev_pos,
-                                                     silver=pred_pos,
-                                                     test_tokens=self.dev_tokens,
-                                                     known_tokens=self.preprocessor.known_tokens)
-        
-        if self.include_morph:
-            print('::: Train scores (morph) :::')
-            pred_morph = self.preprocessor.inverse_transform_morph(predictions=train_preds[self.morph_out_idx])
-            if self.include_morph == 'label':
-                score_dict['train_morph'] = evaluation.single_label_accuracies(gold=self.train_morph,
-                                                 silver=pred_morph,
-                                                 test_tokens=self.train_tokens,
-                                                 known_tokens=self.preprocessor.known_tokens)
-            elif self.include_morph == 'multilabel':
-                score_dict['train_morph'] = evaluation.multilabel_accuracies(gold=self.train_morph,
-                                                 silver=pred_morph,
-                                                 test_tokens=self.train_tokens,
-                                                 known_tokens=self.preprocessor.known_tokens)
-
-
-            if self.include_dev:
-                print('::: Dev scores (morph) :::')
-                pred_morph = self.preprocessor.inverse_transform_morph(predictions=dev_preds[self.morph_out_idx])
-                if self.include_morph == 'label':
-                    score_dict['dev_morph'] = evaluation.single_label_accuracies(gold=self.train_morph,
-                                                     silver=pred_morph,
-                                                     test_tokens=self.dev_tokens,
-                                                     known_tokens=self.preprocessor.known_tokens)
-                elif self.include_morph == 'multilabel':
-                    score_dict['dev_morph'] = evaluation.multilabel_accuracies(gold=self.train_morph,
-                                                     silver=pred_morph,
-                                                     test_tokens=self.dev_tokens,
-                                                     known_tokens=self.preprocessor.known_tokens)
+        score_dict = self.get_score_dict(train_preds, dev_preds, verbose=verbose)
 
         if autosave:
             self.save()
         
+        return score_dict
+
+    def get_score_dict(self, train_preds, dev_preds=None, verbose=True):
+        """ Get score dict given train and dev preds
+
+        :param train_preds: Training predictions
+        :param dev_preds: Development predictions
+        :param verbose: Verbosity (print scores)
+        :return: Score dictionary
+        """
+
+        score_dict = {}
+        if self.include_lemma:
+            if verbose is True:
+                print('::: Train scores (lemmas) :::')
+            pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=train_preds[self.lemma_out_idx])
+            score_dict['train_lemma'] = evaluation.single_label_accuracies(
+                gold=self.train_lemmas,
+                silver=pred_lemmas,
+                test_tokens=self.train_tokens,
+                known_tokens=self.preprocessor.known_tokens,
+                print_scores=verbose
+            )
+
+            if self.include_dev:
+
+                if verbose is True:
+                    print('::: Dev scores (lemmas) :::')
+
+                pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=dev_preds[self.lemma_out_idx])
+                score_dict['dev_lemma'] = evaluation.single_label_accuracies(
+                    gold=self.dev_lemmas,
+                    silver=pred_lemmas,
+                    test_tokens=self.dev_tokens,
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=verbose
+                )
+
+                if self.postcorrect:
+                    if verbose is True:
+                        print('::: Dev scores (lemmas) -> postcorrected :::')
+
+                    for i in range(len(pred_lemmas)):
+                        if pred_lemmas[i] not in self.known_lemmas:
+                            pred_lemmas[i] = min(self.known_lemmas, key=lambda x: editdistance.eval(x, pred_lemmas[i]))
+                    score_dict['dev_lemma_postcorrect'] = evaluation.single_label_accuracies(
+                        gold=self.dev_lemmas,
+                        silver=pred_lemmas,
+                        test_tokens=self.dev_tokens,
+                        known_tokens=self.preprocessor.known_tokens,
+                        print_scores=verbose
+                    )
+
+        if self.include_pos:
+
+            if verbose is True:
+                print('::: Train scores (pos) :::')
+
+            pred_pos = self.preprocessor.inverse_transform_pos(predictions=train_preds[self.pos_out_idx])
+            score_dict['train_pos'] = evaluation.single_label_accuracies(
+                gold=self.train_pos,
+                silver=pred_pos,
+                test_tokens=self.train_tokens,
+                known_tokens=self.preprocessor.known_tokens,
+                print_scores=verbose
+            )
+
+            if self.include_dev:
+
+                if verbose is True:
+                    print('::: Dev scores (pos) :::')
+
+                pred_pos = self.preprocessor.inverse_transform_pos(predictions=dev_preds[self.pos_out_idx])
+                score_dict['dev_pos'] = evaluation.single_label_accuracies(
+                    gold=self.dev_pos,
+                    silver=pred_pos,
+                    test_tokens=self.dev_tokens,
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=verbose
+                )
+
+        if self.include_morph:
+
+            if verbose is True:
+                print('::: Train scores (morph) :::')
+
+            pred_morph = self.preprocessor.inverse_transform_morph(predictions=train_preds[self.morph_out_idx])
+            if self.include_morph == 'label':
+                score_dict['train_morph'] = evaluation.single_label_accuracies(
+                    gold=self.train_morph,
+                    silver=pred_morph,
+                    test_tokens=self.train_tokens,
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=verbose
+                )
+            elif self.include_morph == 'multilabel':
+                score_dict['train_morph'] = evaluation.multilabel_accuracies(
+                    gold=self.train_morph,
+                    silver=pred_morph,
+                    test_tokens=self.train_tokens,
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=verbose
+                )
+
+            if self.include_dev:
+                if verbose is True:
+                    print('::: Dev scores (morph) :::')
+
+                pred_morph = self.preprocessor.inverse_transform_morph(predictions=dev_preds[self.morph_out_idx])
+                if self.include_morph == 'label':
+                    score_dict['dev_morph'] = evaluation.single_label_accuracies(
+                        gold=self.train_morph,
+                        silver=pred_morph,
+                        test_tokens=self.dev_tokens,
+                        known_tokens=self.preprocessor.known_tokens,
+                        print_scores=True
+                    )
+                elif self.include_morph == 'multilabel':
+                    score_dict['dev_morph'] = evaluation.multilabel_accuracies(
+                        gold=self.train_morph,
+                        silver=pred_morph,
+                        test_tokens=self.dev_tokens,
+                        known_tokens=self.preprocessor.known_tokens,
+                        print_scores=True
+                    )
         return score_dict
 
     def annotate(self, tokens):
@@ -662,14 +738,3 @@ class Tagger():
             annotation_dict['morph'] = pred_morph
 
         return annotation_dict
-        
-
-        
-
-
-                
-    
-        
-
-        
-        
