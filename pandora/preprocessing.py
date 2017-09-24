@@ -487,7 +487,7 @@ class Preprocessor():
                 lemmas = self.lemma_encoder.transform(lemmas)
             
                 X_lemma = np_utils.to_categorical(lemmas,
-                        nb_classes=len(self.lemma_encoder.classes_))
+                                                  num_classes=len(self.lemma_encoder.classes_))
 
             returnables['X_lemma'] = X_lemma
 
@@ -498,7 +498,7 @@ class Preprocessor():
             pos = self.pos_encoder.transform(pos)
             
             X_pos = np_utils.to_categorical(pos,
-                        nb_classes=len(self.pos_encoder.classes_))
+                                            num_classes=len(self.pos_encoder.classes_))
             returnables['X_pos'] = X_pos
 
         if morph:
@@ -508,7 +508,7 @@ class Preprocessor():
                 morph = self.morph_encoder.transform(morph)
             
                 X_morph = np_utils.to_categorical(morph,
-                        nb_classes=len(self.morph_encoder.classes_))
+                        num_classes=len(self.morph_encoder.classes_))
                 returnables['X_morph'] = X_morph
 
             elif self.include_morph == 'multilabel':
