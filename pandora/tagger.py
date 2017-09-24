@@ -182,22 +182,24 @@ class Tagger():
 
         self.model.compile(optimizer='adadelta', loss=loss_dict)
 
-    def setup_to_train(self, train_data=None, dev_data=None, test_data=None):
-        # create a model directory:
-        if os.path.isdir(self.model_dir):
-            shutil.rmtree(self.model_dir)
-        os.mkdir(self.model_dir)
-
+    def setup_to_train(self, train_data=None, dev_data=None, test_data=None, build=True):
+        if build:
+            # create a model directory:
+            if os.path.isdir(self.model_dir):
+                shutil.rmtree(self.model_dir)
+            os.mkdir(self.model_dir)
+        
         self.train_tokens = train_data['token']
         if self.include_test:
             self.test_tokens = test_data['token']
         if self.include_dev:
             self.dev_tokens = dev_data['token']
-
-        idx_cnt = 0
+        if build:
+            idx_cnt = 0
         if self.include_lemma:
-            self.lemma_out_idx = idx_cnt
-            idx_cnt += 1
+            if build:
+                self.lemma_out_idx = idx_cnt
+                idx_cnt += 1
             self.train_lemmas = train_data['lemma']
             self.known_lemmas = set(self.train_lemmas)
             if self.include_dev:
@@ -205,36 +207,39 @@ class Tagger():
             if self.include_test:
                 self.test_lemmas = test_data['lemma']
         if self.include_pos:
-            self.pos_out_idx = idx_cnt
-            idx_cnt += 1
+            if build:
+                self.pos_out_idx = idx_cnt
+                idx_cnt += 1
             self.train_pos = train_data['pos']
             if self.include_dev:
                 self.dev_pos = dev_data['pos']
             if self.include_test:
                 self.test_pos = test_data['pos']
         if self.include_morph:
-            self.morph_out_idx = idx_cnt
+            if build:
+                self.morph_out_idx = idx_cnt
             self.train_morph = train_data['morph']
             if self.include_dev:
                 self.dev_morph = dev_data['morph']
             if self.include_test:
                 self.test_morph = test_data['morph']
 
-        self.preprocessor = Preprocessor().fit(tokens=self.train_tokens,
-                                               lemmas=self.train_lemmas,
-                                               pos=self.train_pos,
-                                               morph=self.train_morph,
-                                               include_lemma=self.include_lemma,
-                                               include_morph=self.include_morph,
-                                               max_token_len=self.max_token_len,
-                                               focus_repr=self.focus_repr,
-                                               min_lem_cnt=self.min_lem_cnt,
-                                               )
-        self.pretrainer = Pretrainer(nb_left_tokens=self.nb_left_tokens,
-                                     nb_right_tokens=self.nb_right_tokens,
-                                     size=self.nb_embedding_dims,
-                                     minimum_count=self.min_token_freq_emb)
-        self.pretrainer.fit(tokens=self.train_tokens)
+        if build:
+            self.preprocessor = Preprocessor().fit(tokens=self.train_tokens,
+                                                   lemmas=self.train_lemmas,
+                                                   pos=self.train_pos,
+                                                   morph=self.train_morph,
+                                                   include_lemma=self.include_lemma,
+                                                   include_morph=self.include_morph,
+                                                   max_token_len=self.max_token_len,
+                                                   focus_repr=self.focus_repr,
+                                                   min_lem_cnt=self.min_lem_cnt,
+                                                   )
+            self.pretrainer = Pretrainer(nb_left_tokens=self.nb_left_tokens,
+                                         nb_right_tokens=self.nb_right_tokens,
+                                         size=self.nb_embedding_dims,
+                                         minimum_count=self.min_token_freq_emb)
+            self.pretrainer.fit(tokens=self.train_tokens)
 
         train_transformed = self.preprocessor.transform(tokens=self.train_tokens,
                                                lemmas=self.train_lemmas,
@@ -283,59 +288,60 @@ class Tagger():
             self.dev_contexts = self.pretrainer.transform(tokens=self.dev_tokens)
         if self.include_test:
             self.test_contexts = self.pretrainer.transform(tokens=self.test_tokens)
-        
-        print('Building model...')
-        nb_tags = None
-        try:
-            nb_tags = len(self.preprocessor.pos_encoder.classes_)
-        except AttributeError:
-            pass
-        nb_morph_cats = None
-        try:
-            nb_morph_cats = self.preprocessor.nb_morph_cats
-        except AttributeError:
-            pass
-        max_token_len, token_char_dict = None, None
-        try:
-            max_token_len = self.preprocessor.max_token_len
-            token_char_dict = self.preprocessor.token_char_dict
-        except AttributeError:
-            pass
-        max_lemma_len, lemma_char_dict = None, None
-        try:
-            max_lemma_len = self.preprocessor.max_lemma_len
-            lemma_char_dict = self.preprocessor.lemma_char_dict
-        except AttributeError:
-            pass
-        nb_lemmas = None
-        try:
-            nb_lemmas = len(self.preprocessor.lemma_encoder.classes_)
-        except AttributeError:
-            pass
-        self.model = build_model(token_len=max_token_len,
-                             token_char_vector_dict=token_char_dict,
-                             lemma_len=max_lemma_len,
-                             nb_tags=nb_tags,
-                             nb_morph_cats=nb_morph_cats,
-                             lemma_char_vector_dict=lemma_char_dict,
-                             nb_encoding_layers=self.nb_encoding_layers,
-                             nb_dense_dims=self.nb_dense_dims,
-                             nb_embedding_dims=self.nb_embedding_dims,
-                             nb_train_tokens=len(self.pretrainer.train_token_vocab),
-                             nb_context_tokens=self.nb_context_tokens,
-                             pretrained_embeddings=self.pretrainer.pretrained_embeddings,
-                             include_token=self.include_token,
-                             include_context=self.include_context,
-                             include_lemma=self.include_lemma,
-                             include_pos=self.include_pos,
-                             include_morph=self.include_morph,
-                             nb_filters = self.nb_filters,
-                             filter_length = self.filter_length,
-                             focus_repr = self.focus_repr,
-                             dropout_level = self.dropout_level,
-                             nb_lemmas = nb_lemmas,
-                            )
-        self.save()
+        if build:
+            print('Building model...')
+            nb_tags = None
+            try:
+                nb_tags = len(self.preprocessor.pos_encoder.classes_)
+            except AttributeError:
+                pass
+            nb_morph_cats = None
+            try:
+                nb_morph_cats = self.preprocessor.nb_morph_cats
+            except AttributeError:
+                pass
+            max_token_len, token_char_dict = None, None
+            try:
+                max_token_len = self.preprocessor.max_token_len
+                token_char_dict = self.preprocessor.token_char_dict
+            except AttributeError:
+                pass
+            max_lemma_len, lemma_char_dict = None, None
+            try:
+                max_lemma_len = self.preprocessor.max_lemma_len
+                lemma_char_dict = self.preprocessor.lemma_char_dict
+            except AttributeError:
+                pass
+            nb_lemmas = None
+            try:
+                nb_lemmas = len(self.preprocessor.lemma_encoder.classes_)
+            except AttributeError:
+                pass
+            self.model = build_model(token_len=max_token_len,
+                                 token_char_vector_dict=token_char_dict,
+                                 lemma_len=max_lemma_len,
+                                 nb_tags=nb_tags,
+                                 nb_morph_cats=nb_morph_cats,
+                                 lemma_char_vector_dict=lemma_char_dict,
+                                 nb_encoding_layers=self.nb_encoding_layers,
+                                 nb_dense_dims=self.nb_dense_dims,
+                                 nb_embedding_dims=self.nb_embedding_dims,
+                                 nb_train_tokens=len(self.pretrainer.train_token_vocab),
+                                 nb_context_tokens=self.nb_context_tokens,
+                                 pretrained_embeddings=self.pretrainer.pretrained_embeddings,
+                                 include_token=self.include_token,
+                                 include_context=self.include_context,
+                                 include_lemma=self.include_lemma,
+                                 include_pos=self.include_pos,
+                                 include_morph=self.include_morph,
+                                 nb_filters = self.nb_filters,
+                                 filter_length = self.filter_length,
+                                 focus_repr = self.focus_repr,
+                                 dropout_level = self.dropout_level,
+                                 nb_lemmas = nb_lemmas,
+                                )
+            self.save()
+            
         self.setup = True
 
     def train(self, nb_epochs=None):
@@ -457,6 +463,7 @@ class Tagger():
                 F.write('max_token_len = '+str(self.max_token_len)+'\n')
                 F.write('min_token_freq_emb = '+str(self.min_token_freq_emb)+'\n')
                 F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
+                F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
         
         # plot current embeddings:
         if self.include_context:

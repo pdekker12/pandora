@@ -42,15 +42,17 @@ pip install -r requirements.txt
 
 ### Scripts
 
+*Note* : with Virtualenv install, do not forget to do `source env/bin/activate`.
+
 #### main.py
 
 `main.py` allows you to train your own models :
 
 ```bash
-source env/bin/activate
 python main.py --help
-python main.py config_12c.txt --dev /path/to/dev/resources --train /path/to/train/resources
-python main.py config_12c.txt --dev /path/to/dev/resources --train /path/to/train/resources --nb_epochs 1
+python main.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources
+python main.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources --nb_epochs 1
+python main.py path/to/model/config.txt --load --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources
 ```
 
 #### unseen.py
@@ -58,8 +60,8 @@ python main.py config_12c.txt --dev /path/to/dev/resources --train /path/to/trai
 `unseen.py` allows you to annotate a string or folder
 
 ```bash
-source env/bin/activate
 python unseen.py --help
-python unseen.py config_12c.txt --string --input "Cur in theatrum, Cato severe, venisti?"
-python unseen.py config_12c.txt --input /path/to/dir/to/annotate --ouput /path/to/output/dir
+python unseen.py path/to/model/dir --string --input "Cur in theatrum, Cato severe, venisti?"
+python unseen.py path/to/model/dir --input /path/to/dir/to/annotate/ --output /path/to/output/dir/
+python unseen.py path/to/model/dir --tokenized_input --input /path/to/dir/to/annotate/ --output /path/to/output/dir/ 
 ```

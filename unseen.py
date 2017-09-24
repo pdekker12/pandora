@@ -14,7 +14,7 @@ import argparse
 tokenize = re.compile("\s")
 
 
-def tag_dir(model, input_dir, output_dir, string=None, **kwargs):
+def tag_dir(model, input_dir, output_dir, tokenized_input, string=None, **kwargs):
     """ Tag a directory of texts
 
     :param model: Path to a model file
@@ -37,7 +37,7 @@ def tag_dir(model, input_dir, output_dir, string=None, **kwargs):
         unseen_tokens = pandora.utils.load_unannotated_file(
             orig_path + filename,
             nb_instances=None,
-            tokenized_input=False
+            tokenized_input=tokenized_input
         )
 
         annotations = tagger.annotate(unseen_tokens)
@@ -45,7 +45,7 @@ def tag_dir(model, input_dir, output_dir, string=None, **kwargs):
         print("Keys :" + "\t".join(keys))
         with codecs.open(new_path + filename, 'w', 'utf8') as f:
             for x in zip(*tuple([annotations[k] for k in keys])):
-                f.write('\t'.join(list(x)))
+                f.write('\t'.join(list(x))+'\n')
     
     print('::: ended :::')
 
@@ -93,6 +93,13 @@ if __name__ == '__main__':
         help="Disable post correction",
         action="store_false",
         default=True
+    )
+    parser.add_argument(
+        "--tokenized_input",
+        dest="tokenized_input",
+        action="store_true", 
+        default=False,
+        help="specify if the input is already tokenized (default: False)"
     )
 
     args = parser.parse_args()
