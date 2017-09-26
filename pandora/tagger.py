@@ -61,7 +61,21 @@ class Tagger():
                  min_lem_cnt = 1,
                  overwrite=None
                  ):
-        
+
+        if overwrite is not None:
+            # Overwrite should be a dict of attributes to change value of the trainer
+            for key, value in overwrite.items():
+                self.__setattr__(key, value)
+
+        # initialize:
+        self.setup = False
+        self.curr_nb_epochs = 0
+
+        self.train_tokens, self.dev_tokens, self.test_tokens = None, None, None
+        self.train_lemmas, self.dev_lemmas, self.test_lemmas = None, None, None
+        self.train_pos, self.dev_pos, self.test_pos = None, None, None
+        self.train_morph, self.dev_morph, self.test_morph = None, None, None
+
         if load:
             if model_dir:
                 self.config_path = os.sep.join((model_dir, 'config.txt'))
@@ -125,24 +139,13 @@ class Tagger():
             self.halve_lr_at = int(param_dict['halve_lr_at'])
             self.max_token_len = int(param_dict['max_token_len'])
             self.min_lem_cnt = int(param_dict['min_lem_cnt'])
+            print(list(param_dict.keys()))
+            if "curr_nb_epochs" in param_dict:
+                self.curr_nb_epochs = int(param_dict["curr_nb_epochs"])
 
-        if overwrite is not None:
-            # Overwrite should be a dict of attributes to change value of the trainer
-            for key, value in overwrite.items():
-                self.__setattr__(key, value)
-        
         # create a models directory if it isn't there already:
         if not os.path.isdir(self.model_dir):
             os.mkdir(model_dir)
-
-        # initialize:
-        self.setup = False
-        self.curr_nb_epochs = 0
-
-        self.train_tokens, self.dev_tokens, self.test_tokens = None, None, None
-        self.train_lemmas, self.dev_lemmas, self.test_lemmas = None, None, None
-        self.train_pos, self.dev_pos, self.test_pos = None, None, None
-        self.train_morph, self.dev_morph, self.test_morph = None, None, None
 
         if load:
             self.load()
@@ -453,40 +456,8 @@ class Tagger():
             # save known lemmas:
             with open(os.sep.join((self.model_dir, 'known_lemmas.p')), 'wb') as f:
                 pickle.dump(self.known_lemmas, f)
-        # save config file:
-        #JBC: commented out, to allow saving from actual parameters
-        #if self.config_path:
-            # make sure that we can reproduce parametrization when reloading:
-        #    if not self.config_path == os.sep.join((self.model_dir, 'config.txt')):
-        #        shutil.copy(self.config_path, os.sep.join((self.model_dir, 'config.txt')))
-        #else:
-        with open(os.sep.join((self.model_dir, 'config.txt')), 'w') as F:
-            F.write('# Parameter file\n\n[global]\n')
-            F.write('nb_encoding_layers = '+str(self.nb_encoding_layers)+'\n')
-            F.write('nb_dense_dims = '+str(self.nb_dense_dims)+'\n')
-            F.write('batch_size = '+str(self.batch_size)+'\n')
-            F.write('nb_left_tokens = '+str(self.nb_left_tokens)+'\n')
-            F.write('nb_right_tokens = '+str(self.nb_right_tokens)+'\n')
-            F.write('nb_embedding_dims = '+str(self.nb_embedding_dims)+'\n')
-            F.write('model_dir = '+str(self.model_dir)+'\n')
-            F.write('postcorrect = '+str(self.postcorrect)+'\n')
-            F.write('nb_filters = '+str(self.nb_filters)+'\n')
-            F.write('filter_length = '+str(self.filter_length)+'\n')
-            F.write('focus_repr = '+str(self.focus_repr)+'\n')
-            F.write('dropout_level = '+str(self.dropout_level)+'\n')
-            F.write('include_token = '+str(self.include_context)+'\n')
-            F.write('include_context = '+str(self.include_context)+'\n')
-            F.write('include_lemma = '+str(self.include_lemma)+'\n')
-            F.write('include_pos = '+str(self.include_pos)+'\n')
-            F.write('include_morph = '+str(self.include_morph)+'\n')
-            F.write('include_dev = '+str(self.include_dev)+'\n')
-            F.write('include_test = '+str(self.include_test)+'\n')
-            F.write('nb_epochs = '+str(self.nb_epochs)+'\n')
-            F.write('halve_lr_at = '+str(self.halve_lr_at)+'\n')
-            F.write('max_token_len = '+str(self.max_token_len)+'\n')
-            F.write('min_token_freq_emb = '+str(self.min_token_freq_emb)+'\n')
-            F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
-            F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
+
+        self.save_params()
         
         # plot current embeddings:
         if self.include_context:
@@ -520,6 +491,37 @@ class Tagger():
             ax1.set_yticklabels([]); ax1.set_yticks([])
             sns.plt.savefig(os.sep.join((self.model_dir, 'embed_after.pdf')),
                             bbox_inches=0)
+
+    def save_params(self):
+        """ Save the current params into the model dir
+        """
+        with open(os.sep.join((self.model_dir, 'config.txt')), 'w') as F:
+            F.write('# Parameter file\n\n[global]\n')
+            F.write('nb_encoding_layers = '+str(self.nb_encoding_layers)+'\n')
+            F.write('nb_dense_dims = '+str(self.nb_dense_dims)+'\n')
+            F.write('batch_size = '+str(self.batch_size)+'\n')
+            F.write('nb_left_tokens = '+str(self.nb_left_tokens)+'\n')
+            F.write('nb_right_tokens = '+str(self.nb_right_tokens)+'\n')
+            F.write('nb_embedding_dims = '+str(self.nb_embedding_dims)+'\n')
+            F.write('model_dir = '+str(self.model_dir)+'\n')
+            F.write('postcorrect = '+str(self.postcorrect)+'\n')
+            F.write('nb_filters = '+str(self.nb_filters)+'\n')
+            F.write('filter_length = '+str(self.filter_length)+'\n')
+            F.write('focus_repr = '+str(self.focus_repr)+'\n')
+            F.write('dropout_level = '+str(self.dropout_level)+'\n')
+            F.write('include_token = '+str(self.include_context)+'\n')
+            F.write('include_context = '+str(self.include_context)+'\n')
+            F.write('include_lemma = '+str(self.include_lemma)+'\n')
+            F.write('include_pos = '+str(self.include_pos)+'\n')
+            F.write('include_morph = '+str(self.include_morph)+'\n')
+            F.write('include_dev = '+str(self.include_dev)+'\n')
+            F.write('include_test = '+str(self.include_test)+'\n')
+            F.write('nb_epochs = '+str(self.nb_epochs)+'\n')
+            F.write('halve_lr_at = '+str(self.halve_lr_at)+'\n')
+            F.write('max_token_len = '+str(self.max_token_len)+'\n')
+            F.write('min_token_freq_emb = '+str(self.min_token_freq_emb)+'\n')
+            F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
+            F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
 
     def epoch(self, autosave=True, verbose=True):
         if not self.setup:
