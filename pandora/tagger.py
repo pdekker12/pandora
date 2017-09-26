@@ -139,7 +139,6 @@ class Tagger():
             self.halve_lr_at = int(param_dict['halve_lr_at'])
             self.max_token_len = int(param_dict['max_token_len'])
             self.min_lem_cnt = int(param_dict['min_lem_cnt'])
-            print(list(param_dict.keys()))
             if "curr_nb_epochs" in param_dict:
                 self.curr_nb_epochs = int(param_dict["curr_nb_epochs"])
 
