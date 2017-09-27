@@ -9,7 +9,7 @@ import codecs
 import re
 
 
-def train_func(config, train, dev, test=None, load=False, verbose=True, first=1, each=1, eval_file=None, no_shell=False, **kwargs):
+def train_func(config, train, dev=None, test=None, load=False, verbose=True, first=1, each=1, eval_file=None, no_shell=False, **kwargs):
     """ Main CLI Interface (training)
 
     :param config: Path to retrieve configuration file
@@ -50,21 +50,22 @@ def train_func(config, train, dev, test=None, load=False, verbose=True, first=1,
         include_morph=params['include_morph'],
         nb_instances=None
     )
-
-    dev_data = pandora.utils.load_annotated_dir(
-        dev,
-        format='tab',
-        extension='.tab',
-        include_pos=params['include_pos'],
-        include_lemma=params['include_lemma'],
-        include_morph=params['include_morph'],
-        nb_instances=None
-    )
-
+    
     data_sets = dict(
             train_data=train_data,
-            dev_data=dev_data
     )
+
+    if dev is not None:
+        dev_data = pandora.utils.load_annotated_dir(
+            dev,
+            format='tab',
+            extension='.tab',
+            include_pos=params['include_pos'],
+            include_lemma=params['include_lemma'],
+            include_morph=params['include_morph'],
+            nb_instances=None
+        )
+        data_sets["dev_data"] = dev_data
 
     if test is not None:
         test_data = pandora.utils.load_annotated_dir(
