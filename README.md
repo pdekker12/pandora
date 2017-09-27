@@ -1,7 +1,7 @@
 pandora
 ==========
 
-A Tagger-Lemmatizer for Latin
+A (language-independent) Tagger-Lemmatizer for Latin & the Vernacular
 
 
 ### Install

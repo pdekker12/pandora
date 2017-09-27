@@ -485,13 +485,14 @@ class Tagger():
             for x, y, name, cluster_label in zip(x1, x2, labels, clustering.labels_):
                 ax1.text(x, y, name, ha='center', va="center",
                          color=plt.cm.spectral(cluster_label / 10.),
-                         fontdict={'family': 'Arial', 'size': 8})
+                         fontdict={'family': 'sans-serif', 'size': 8})
             # control aesthetics:
             ax1.set_xlabel(''); ax1.set_ylabel('')
             ax1.set_xticklabels([]); ax1.set_xticks([])
             ax1.set_yticklabels([]); ax1.set_yticks([])
             sns.plt.savefig(os.sep.join((self.model_dir, 'embed_after.pdf')),
                             bbox_inches=0)
+            sns.plt.close()
 
     def save_params(self):
         """ Save the current params into the model dir
