@@ -29,6 +29,7 @@ import pandora.evaluation as evaluation
 from pandora.model import build_model
 from pandora.preprocessing import Preprocessor
 from pandora.pretraining import Pretrainer
+from pandora.logger import Logger
 
 
 class Tagger():
@@ -75,6 +76,7 @@ class Tagger():
         self.train_lemmas, self.dev_lemmas, self.test_lemmas = None, None, None
         self.train_pos, self.dev_pos, self.test_pos = None, None, None
         self.train_morph, self.dev_morph, self.test_morph = None, None, None
+        self.logger = Logger()  # Default logger uses shell
 
         if load:
             if model_dir:
@@ -359,7 +361,7 @@ class Tagger():
         print('Test stats:')
         utils.stats(tokens=self.test_tokens, lemmas=self.test_lemmas, known=self.preprocessor.known_tokens)
 
-    def test(self, multilabel_threshold=0.5, verbose=True):
+    def test(self, multilabel_threshold=0.5, verbose=False):
         """ Run tests evaluation with prediction
 
         :param multilabel_threshold:
@@ -387,7 +389,7 @@ class Tagger():
         if self.include_lemma:
             if verbose:
                 print('::: Test scores (lemmas) :::')
-            
+
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=test_preds[self.lemma_out_idx])
             if self.postcorrect:
                 for i in range(len(pred_lemmas)):
@@ -522,7 +524,7 @@ class Tagger():
             F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
             F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
 
-    def epoch(self, autosave=True, verbose=True):
+    def epoch(self, autosave=True, eval_test=False):
         if not self.setup:
             raise ValueError('Not set up yet... Call Tagger.setup_() first.')
 
@@ -555,6 +557,25 @@ class Tagger():
         # Train once
         self.model.fit(train_in, train_out, nb_epoch=1, shuffle=True, batch_size=self.batch_size)
 
+        def run_eval():
+            score_dict = self.eval(train_in=train_in)
+            if eval_test is True:
+                score_dict.update(self.test())
+            return score_dict
+
+        score_dict = self.logger.epoch(self.curr_nb_epochs, run_eval)
+
+        if autosave:
+            self.save()
+        
+        return score_dict
+
+    def eval(self, train_in):
+        """ Evaluate current epoch
+
+        :param train_in: Data from training
+        :return:
+        """
         # Get train preds:
         train_preds = self.model.predict(train_in, batch_size=self.batch_size)
         if isinstance(train_preds, np.ndarray):
@@ -573,14 +594,9 @@ class Tagger():
             if isinstance(dev_preds, np.ndarray):
                 dev_preds = [dev_preds]
 
-        score_dict = self.get_score_dict(train_preds, dev_preds, verbose=verbose)
+        return self.get_score_dict(train_preds, dev_preds)
 
-        if autosave:
-            self.save()
-        
-        return score_dict
-
-    def get_score_dict(self, train_preds, dev_preds=None, verbose=True):
+    def get_score_dict(self, train_preds, dev_preds=None, verbose=False):
         """ Get score dict given train and dev preds
 
         :param train_preds: Training predictions
