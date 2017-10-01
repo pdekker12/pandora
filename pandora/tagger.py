@@ -53,6 +53,16 @@ class Tagger():
                  overwrite=None,
                  model='Keras'):
 
+        # initialize:
+        self.setup = False
+        self.curr_nb_epochs = 0
+
+        self.train_tokens, self.dev_tokens, self.test_tokens = None, None, None
+        self.train_lemmas, self.dev_lemmas, self.test_lemmas = None, None, None
+        self.train_pos, self.dev_pos, self.test_pos = None, None, None
+        self.train_morph, self.dev_morph, self.test_morph = None, None, None
+        self.logger = Logger()  # Default logger uses shell
+
         if MODELS[model] is None:
             raise ValueError("Couldn't load implementation {}".format(model))
 
@@ -147,19 +157,20 @@ class Tagger():
         lemmas_path = os.sep.join((self.model_dir, 'known_lemmas.txt'))
         self.known_lemmas = set([l.strip() for l in open(lemmas_path, 'r')])
 
-    def setup_to_train(self, train_data=None, dev_data=None, test_data=None, build=True):
+    def setup_to_train(self, train_data=None, dev_data=None, test_data=None,
+                       build=True):
         if build:
             # create a model directory:
             if os.path.isdir(self.model_dir):
                 shutil.rmtree(self.model_dir)
             os.mkdir(self.model_dir)
-        
+
         self.train_tokens = train_data['token']
         if self.include_test:
             self.test_tokens = test_data['token']
         if self.include_dev:
             self.dev_tokens = dev_data['token']
-            
+
         if self.include_lemma:
             self.train_lemmas = train_data['lemma']
             self.known_lemmas = set(self.train_lemmas)
@@ -209,12 +220,14 @@ class Tagger():
             lemmas=self.train_lemmas,
             pos=self.train_pos,
             morph=self.train_morph)
+
         if self.include_dev:
             dev_transformed = self.preprocessor.transform(
                 tokens=self.dev_tokens,
                 lemmas=self.dev_lemmas,
                 pos=self.dev_pos,
                 morph=self.dev_morph)
+
         if self.include_test:
             test_transformed = self.preprocessor.transform(
                 tokens=self.test_tokens,
@@ -223,7 +236,6 @@ class Tagger():
                 morph=self.test_morph)
 
         self.train_X_focus = train_transformed['X_focus']
-
         if self.include_dev:
             self.dev_X_focus = dev_transformed['X_focus']
         if self.include_test:
@@ -360,7 +372,9 @@ class Tagger():
             test_preds = [test_preds]
 
         if self.include_lemma:
-            print('::: Test scores (lemmas) :::')
+            if verbose:
+                print('::: Test scores (lemmas) :::')
+
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                 predictions=test_preds['lemma_out'])
             if self.postcorrect:
@@ -377,7 +391,9 @@ class Tagger():
                 known_tokens=self.preprocessor.known_tokens)
 
         if self.include_pos:
-            print('::: Test scores (pos) :::')
+            if verbose:
+                print('::: Test scores (pos) :::')
+
             pred_pos = self.preprocessor.inverse_transform_pos(
                 predictions=test_preds['pos_out'])
             score_dict['test_pos'] = evaluation.single_label_accuracies(
@@ -387,7 +403,9 @@ class Tagger():
                 known_tokens=self.preprocessor.known_tokens)
 
         if self.include_morph:
-            print('::: Test scores (morph) :::')
+            if verbose:
+                print('::: Test scores (morph) :::')
+
             pred_morph = self.preprocessor.inverse_transform_morph(
                 predictions=test_preds['morph_out'],
                 threshold=multilabel_threshold)
@@ -448,7 +466,7 @@ class Tagger():
             F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
             F.write('char_embed_dim = '+str(self.char_embed_dim)+'\n')
 
-    def epoch(self, autosave=True):
+    def epoch(self, autosave=True, eval_test=False):
         if not self.setup:
             raise ValueError(
                 'Not set up yet... Call Tagger.setup_to_train() first.')
@@ -477,12 +495,32 @@ class Tagger():
 
         self.model.epoch(train_in, train_out)
 
+        def run_eval():
+            score_dict = self.eval(train_in=train_in)
+            if eval_test is True:
+                score_dict.update(self.test())
+            return score_dict
+
+        score_dict = self.logger.epoch(self.curr_nb_epochs, run_eval)
+
+        if autosave:
+            self.save()
+
+        return score_dict
+
+    def eval(self, train_in):
+        """ Evaluate current epoch
+
+        :param train_in: Data from training
+        :return:
+        """
+
         # get train preds:
         train_preds = self.model.predict(train_in)
         if isinstance(train_preds, np.ndarray):
             train_preds = [train_preds]
 
-        # Get dev preds
+        # get dev preds:
         dev_preds = None
         if self.include_dev:
             dev_in = {}
@@ -509,24 +547,30 @@ class Tagger():
 
         score_dict = {}
         if self.include_lemma:
-            print('::: Train scores (lemmas) :::')
+            if verbose:
+                print('::: Train scores (lemmas) :::')
+
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                 predictions=train_preds['lemma_out'])
             score_dict['train_lemma'] = evaluation.single_label_accuracies(
                 gold=self.train_lemmas,
                 silver=pred_lemmas,
                 test_tokens=self.train_tokens,
-                known_tokens=self.preprocessor.known_tokens)
+                known_tokens=self.preprocessor.known_tokens,
+                print_scores=verbose)
 
             if self.include_dev:
-                print('::: Dev scores (lemmas) :::')
+                if verbose:
+                    print('::: Dev scores (lemmas) :::')
+
                 pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                     predictions=dev_preds['lemma_out'])
                 score_dict['dev_lemma'] = evaluation.single_label_accuracies(
                     gold=self.dev_lemmas,
                     silver=pred_lemmas,
                     test_tokens=self.dev_tokens,
-                    known_tokens=self.preprocessor.known_tokens)
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=verbose)
 
                 if self.postcorrect:
                     if verbose is True:
@@ -542,30 +586,39 @@ class Tagger():
                         gold=self.dev_lemmas,
                         silver=pred_lemmas,
                         test_tokens=self.dev_tokens,
-                        known_tokens=self.preprocessor.known_tokens)
+                        known_tokens=self.preprocessor.known_tokens,
+                        print_scores=verbose)
 
         if self.include_pos:
-            print('::: Train scores (pos) :::')
+            if verbose:
+                print('::: Train scores (pos) :::')
+
             pred_pos = self.preprocessor.inverse_transform_pos(
                 predictions=train_preds['pos_out'])
             score_dict['train_pos'] = evaluation.single_label_accuracies(
                 gold=self.train_pos,
                 silver=pred_pos,
                 test_tokens=self.train_tokens,
-                known_tokens=self.preprocessor.known_tokens)
-            
+                known_tokens=self.preprocessor.known_tokens,
+                print_scores=verbose)
+
             if self.include_dev:
-                print('::: Dev scores (pos) :::')
+                if verbose:
+                    print('::: Dev scores (pos) :::')
+
                 pred_pos = self.preprocessor.inverse_transform_pos(
                     predictions=dev_preds['pos_out'])
                 score_dict['dev_pos'] = evaluation.single_label_accuracies(
                     gold=self.dev_pos,
                     silver=pred_pos,
                     test_tokens=self.dev_tokens,
-                    known_tokens=self.preprocessor.known_tokens)
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=verbose)
 
         if self.include_morph:
-            print('::: Train scores (morph) :::')
+            if verbose:
+                print('::: Train scores (morph) :::')
+
             pred_morph = self.preprocessor.inverse_transform_morph(
                 predictions=train_preds['morph_out'])
 
@@ -574,17 +627,21 @@ class Tagger():
                     gold=self.train_morph,
                     silver=pred_morph,
                     test_tokens=self.train_tokens,
-                    known_tokens=self.preprocessor.known_tokens)
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=verbose)
 
             elif self.include_morph == 'multilabel':
                 score_dict['train_morph'] = evaluation.multilabel_accuracies(
                     gold=self.train_morph,
                     silver=pred_morph,
                     test_tokens=self.train_tokens,
-                    known_tokens=self.preprocessor.known_tokens)
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=verbose)
 
             if self.include_dev:
-                print('::: Dev scores (morph) :::')
+                if verbose:
+                    print('::: Dev scores (morph) :::')
+
                 pred_morph = self.preprocessor.inverse_transform_morph(
                     predictions=dev_preds['morph_out'])
 
@@ -593,17 +650,16 @@ class Tagger():
                         gold=self.train_morph,
                         silver=pred_morph,
                         test_tokens=self.dev_tokens,
-                        known_tokens=self.preprocessor.known_tokens)
+                        known_tokens=self.preprocessor.known_tokens,
+                        print_scores=verbose)
 
                 elif self.include_morph == 'multilabel':
                     score_dict['dev_morph'] = evaluation.multilabel_accuracies(
                         gold=self.train_morph,
                         silver=pred_morph,
                         test_tokens=self.dev_tokens,
-                        known_tokens=self.preprocessor.known_tokens)
-
-        if autosave:
-            self.save()
+                        known_tokens=self.preprocessor.known_tokens,
+                        print_scores=verbose)
 
         return score_dict
 
