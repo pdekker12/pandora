@@ -3,9 +3,6 @@
 
 from __future__ import print_function
 
-from collections import Counter
-from operator import itemgetter
-import numpy as np
 
 def single_label_accuracies(gold, silver,
                             test_tokens, known_tokens,
@@ -13,7 +10,7 @@ def single_label_accuracies(gold, silver,
     """Calculate accuracy scores, assuming a single-label setup.
        Single-label accuracies are calculated for all tokens, as
        well as the unknown and known tokens separately. A known
-       token is considered a token which has been encountered
+       token is a token which has been encountered
        verbatimly during training.
 
     Parameters
@@ -26,7 +23,7 @@ def single_label_accuracies(gold, silver,
         The original tokens corresponding to
         the list of gold/silver labels.
     known_tokens : set of str
-        A set of tokens which were met verbatimly
+        The set of tokens which were met verbatimly
         during training (cf. known vs unknown tokens)
     print_scores : bool (default: True)
         Whether to print the scores (on top of
@@ -41,7 +38,7 @@ def single_label_accuracies(gold, silver,
             * unknown tokens accuracy
 
     """
-    
+
     kno_corr, unk_corr = 0.0, 0.0
     nb_kno, nb_unk = 0.0, 0.0
 
@@ -71,6 +68,7 @@ def single_label_accuracies(gold, silver,
 
     return all_acc, kno_acc, unk_acc
 
+
 def multilabel_accuracies(gold, silver,
                           test_tokens, known_tokens,
                           print_scores=True):
@@ -86,10 +84,10 @@ def multilabel_accuracies(gold, silver,
     Parameters
     ===========
     gold : list of str
-        The correct labels
+        The correct labels (subtags joined by pipes)
     silver : list of str
         The predicted labels
-    test_tokens : list of str
+    test_tokens : list of str (subtags joined by pipes)
         The original tokens corresponding to
         the list of gold/silver labels.
     known_tokens : set of str
@@ -137,6 +135,3 @@ def multilabel_accuracies(gold, silver,
         print('+\tunk acc:', unk_acc)
 
     return all_acc, kno_acc, unk_acc
-
-
-    

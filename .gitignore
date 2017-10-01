@@ -63,3 +63,6 @@ embeddings.pdf
 models/*
 neighbours.txt
 resources
+
+# Emacs
+*~

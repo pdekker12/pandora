@@ -8,12 +8,15 @@ import codecs
 import re
 import configparser as ConfigParser
 
+import numpy as np
+
+
 def load_annotated_dir(directory='directory', format='tab',
                        extension='.txt', nb_instances=None,
                        include_lemma=True, include_morph=True,
                        include_pos=True):
 
-    """Loads annotated data files from under a directory.
+    """Loads annotated data files from a (single) directory.
 
     Parameters
     ===========
@@ -28,9 +31,9 @@ def load_annotated_dir(directory='directory', format='tab',
         Only filenames ending in this extension will be
         loaded.
     nb_instances : int, optional (default: None)
-        Max number of instances to load from each file.
-        Cutoff for development purposes.
-        All instances will be loaded if `None`.
+        Max number of instances to load *from each file*
+        under dir. This is a useful cutoff for development
+        purposes. All instances will be loaded if `None`.
     include_lemma : bool (default: True)
         Whether to include lemma labels
     include_pos : bool (default: True)
@@ -42,12 +45,12 @@ def load_annotated_dir(directory='directory', format='tab',
     ===========
     instances : dict
         A dict representing all instances. Values under at
-        least of the following keys can be zipped to get the
-        information for each token:
+        least one of the following keys can be zipped to
+        get the information for each instance:
         {'token': [t1, t2, t3], 'lemma': [l1, l2, l3],
          'pos': [p1, p2, p3], 'morph': [m1, m2, m3]}
 
-        The `token` values will *always* be included. 
+        The `token` values will *always* be included.
 
     Notes
     ===========
@@ -67,14 +70,14 @@ def load_annotated_dir(directory='directory', format='tab',
 
             if not filepath.endswith(extension):
                 continue
-            
+
             insts = load_annotated_file(filepath=filepath,
                                         format=format,
                                         nb_instances=nb_instances,
                                         include_lemma=include_lemma,
                                         include_morph=include_morph,
                                         include_pos=include_pos)
-
+            
             instances['token'].extend(insts['token'])
             if include_lemma:
                 instances['lemma'].extend(insts['lemma'])
@@ -85,10 +88,11 @@ def load_annotated_dir(directory='directory', format='tab',
 
     return instances
 
+
 def load_annotated_file(filepath='text.txt', format='tab',
                         nb_instances=None, include_lemma=True,
                         include_morph=True, include_pos=True):
-    
+
     """Loads the annotated instances from a single file.
 
     Parameters
@@ -120,7 +124,7 @@ def load_annotated_file(filepath='text.txt', format='tab',
         {'token': [t1, t2, t3], 'lemma': [l1, l2, l3],
          'pos': [p1, p2, p3], 'morph': [m1, m2, m3]}
 
-        The `token` values will *always* be included. 
+        The `token` values will *always* be included.
 
     Notes
     ===========
@@ -129,7 +133,7 @@ def load_annotated_file(filepath='text.txt', format='tab',
     formats are supported:
     - `connl` format:
         See http://universaldependencies.org/docs/format.html.
-    - `tab` separated format (exactly 4 columns): 
+    - `tab` separated format (exactly 4 columns):
         * E.g.
             si   si  CON _
             autem   autem   CON _
@@ -158,10 +162,12 @@ def load_annotated_file(filepath='text.txt', format='tab',
     if format == 'conll':
         for line in codecs.open(filepath, 'r', 'utf8'):
             line = line.strip()
+
             if line:
                 try:
                     idx, tok, _, lem, _, pos, morph = \
                         line.split()[:7]
+                    print(idx, tok, lem, pos)
                     if include_lemma:
                         lem = lem.lower().strip().replace(' ', '')
                     tok = tok.strip().replace('~', '').replace(' ', '')
@@ -205,7 +211,12 @@ def load_annotated_file(filepath='text.txt', format='tab',
                 if len(instances['token']) >= nb_instances:
                     break
 
+    else:
+        raise NotImplementedError('Unsupported file format: must be\
+                                  one of: conll, tab')
+
     return instances
+
 
 def load_unannotated_file(filepath='test.txt',
                           nb_instances=None,
@@ -214,7 +225,7 @@ def load_unannotated_file(filepath='test.txt',
 
     Parameters
     ===========
-    filpath : str (default: 'text.txt')
+    filepath : str (default: 'text.txt')
         Path to the unannotated file to load.
     nb_instances : int, optional (default: None)
         Max number of instances to load from the file.
@@ -225,7 +236,7 @@ def load_unannotated_file(filepath='test.txt',
         * If `True`, one token per line is expected.
         * Else input file is tokenized using nltk's
           generic `nltk.tokenize.wordpunct_tokenize`
-    
+
 
     Returns
     ===========
@@ -255,9 +266,10 @@ def load_unannotated_file(filepath='test.txt',
         else:
             return tokens
 
+
 def stats(tokens, lemmas, known):
 
-    """Simple stats printing for a list of
+    """Prints simple stats for a list of
     tokens and lemmas.
 
     Parameters
@@ -274,8 +286,7 @@ def stats(tokens, lemmas, known):
 
     print('Nb of tokens:', len(tokens))
     print('Nb of unique tokens:', len(set(tokens)))
-    cnt = sum([1.0 for k in tokens if k not in known]) \
-            / len(tokens) * 100.0
+    cnt = sum([1.0 for k in tokens if k not in known]) / len(tokens) * 100.0
     print('Nb of unseen tokens:', cnt)
     print('Nb of unique lemmas: ', len(set(lemmas)))
 
@@ -295,19 +306,50 @@ def get_param_dict(p):
         * Instances of 'True' and 'False' are
         casted to bools.
     """
+    def read_sections(config):
+        param_dict = dict()
+        for section in config.sections():
+            for name, value in config.items(section):
+                if value == 'True':
+                    value = True
+                elif value == 'False':
+                    value = False
+                param_dict[name] = value
+        return param_dict
 
-    config = ConfigParser.ConfigParser()
-    config.read(p)
-
-    param_dict = dict()
-    for section in config.sections():
-        for name, value in config.items(section):
-            if value == 'True':
-                value = True
-            elif value == 'False':
-                value = False
-            param_dict[name] = value
-
-    return param_dict
+    try:
+        config = ConfigParser.ConfigParser()
+        config.read(p)
+        return read_sections(config)
+    except Exception as e:
+        raise ValueError(
+            "Couldn't read config file: %s. Exception: %s" % (p, str(e)))
 
 
+def to_categorical(y, num_classes=None):
+    """Converts a class vector (integers) to binary class matrix.
+    E.g. for use with categorical_crossentropy.
+    (Borrowed from keras to avoid a direct dependency.)
+
+    Parameters
+    ===========
+    y : 1d array
+        class vector to be converted into a matrix
+        (integers from 0 to num_classes).
+    num_classes : int (optional)
+        Total number of distinct classes. Will be
+        inferred if not provided.
+
+    Returns
+    ===========
+    categorical : 2D array of shape (nb_samples, nb_classes)
+        A binary matrix representation of the input.
+    """
+
+    y = np.array(y, dtype='int').ravel()
+    if not num_classes:
+        num_classes = np.max(y) + 1
+    n = y.shape[0]
+    categorical = np.zeros((n, num_classes))
+    categorical[np.arange(n), y] = 1
+    return categorical

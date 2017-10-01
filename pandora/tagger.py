@@ -2,149 +2,118 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-import pickle
 import os
-import codecs
 import shutil
-from operator import itemgetter
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
-from gensim.models import Word2Vec
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.manifold import TSNE
-
-import keras.backend as K
-from keras.utils import np_utils
-from keras.models import model_from_json
-from keras import backend as K
 
 import editdistance
 
 import pandora.utils as utils
 import pandora.evaluation as evaluation
-from pandora.model import build_model
+from pandora.impl import KerasModel, PyTorchModel
 from pandora.preprocessing import Preprocessor
 from pandora.pretraining import Pretrainer
 from pandora.logger import Logger
 
 
+MODELS = {'Keras': KerasModel, 'PyTorch': PyTorchModel}
+
+
 class Tagger():
     def __init__(self,
                  config_path=None,
-                 nb_encoding_layers = 1,
-                 nb_dense_dims = 30,
-                 batch_size = 100,
-                 nb_left_tokens = 2,
-                 nb_right_tokens = 2,
-                 nb_embedding_dims = 150,
-                 model_dir = 'new_model',
-                 postcorrect = True,
-                 include_token = True,
-                 include_context = True,
-                 include_lemma = True,
-                 include_pos = True,
-                 include_morph = True,
-                 include_dev = True,
-                 include_test = True,
-                 nb_filters = 100,
-                 filter_length = 3,
-                 focus_repr = 'recurrent',
-                 dropout_level = .1,
-                 load = False,
-                 nb_epochs = 15,
-                 min_token_freq_emb = 5,
-                 halve_lr_at = 10,
-                 max_token_len = None,
-                 min_lem_cnt = 1,
-                 overwrite=None
-                 ):
+                 nb_encoding_layers=1,
+                 nb_dense_dims=30,
+                 char_embed_dim=50,
+                 batch_size=100,
+                 nb_left_tokens=2,
+                 nb_right_tokens=2,
+                 nb_embedding_dims=150,
+                 model_dir='new_model',
+                 postcorrect=True,
+                 include_token=True,
+                 include_context=True,
+                 include_lemma=True,
+                 include_pos=True,
+                 include_morph=True,
+                 include_dev=True,
+                 include_test=True,
+                 nb_filters=100,
+                 filter_length=3,
+                 focus_repr='recurrent',
+                 dropout_level=.1,
+                 load=False,
+                 nb_epochs=15,
+                 min_token_freq_emb=5,
+                 halve_lr_at=10,
+                 max_token_len=None,
+                 max_lemma_len=None,
+                 min_lem_cnt=1,
+                 overwrite=None,
+                 model='Keras'):
 
-        if overwrite is not None:
-            # Overwrite should be a dict of attributes to change value of the trainer
-            for key, value in overwrite.items():
-                self.__setattr__(key, value)
-
-        # initialize:
-        self.setup = False
-        self.curr_nb_epochs = 0
-
-        self.train_tokens, self.dev_tokens, self.test_tokens = None, None, None
-        self.train_lemmas, self.dev_lemmas, self.test_lemmas = None, None, None
-        self.train_pos, self.dev_pos, self.test_pos = None, None, None
-        self.train_morph, self.dev_morph, self.test_morph = None, None, None
-        self.logger = Logger()  # Default logger uses shell
+        if MODELS[model] is None:
+            raise ValueError("Couldn't load implementation {}".format(model))
 
         if load:
             if model_dir:
-                self.config_path = os.sep.join((model_dir, 'config.txt'))
+                config_path = os.sep.join((model_dir, 'config.txt'))
+                param_dict = utils.get_param_dict(config_path)
+                print('Using params from config file: %s' % config_path)
             else:
-                raise ValueError('To load a tagger you, must specify model_name!')
+                raise ValueError(
+                    'To load a tagger you, must specify a model_name!')
         else:
-            self.config_path = config_path
+            param_dict = {}
 
-        if not config_path and not load:
-            self.nb_encoding_layers = int(nb_encoding_layers)
-            self.nb_dense_dims = int(nb_dense_dims)
-            self.batch_size = int(batch_size)
-            self.nb_left_tokens = int(nb_left_tokens)
-            self.nb_right_tokens = int(nb_right_tokens)
-            self.nb_context_tokens = self.nb_left_tokens + self.nb_right_tokens
-            self.nb_embedding_dims = int(nb_embedding_dims)
-            self.model_dir = model_dir
-            self.postcorrect = bool(postcorrect)
-            self.nb_filters = int(nb_filters)
-            self.filter_length = int(filter_length)
-            self.focus_repr = focus_repr
-            self.dropout_level = float(dropout_level)
-            self.include_token = include_token
-            self.include_context = include_context
-            self.include_lemma = include_lemma
-            self.include_pos = include_pos
-            self.include_morph = include_morph
-            self.include_dev = include_dev
-            self.include_test = include_test
-            self.min_token_freq_emb = min_token_freq_emb
-            self.nb_epochs = int(nb_epochs)
-            self.halve_lr_at = int(halve_lr_at)
-            self.max_token_len = int(max_token_len)
-            self.min_lem_cnt = int(min_lem_cnt)
+        self.nb_encoding_layers = \
+            int(param_dict.get('nb_encoding_layers', nb_encoding_layers))
+        self.nb_dense_dims = \
+            int(param_dict.get('nb_dense_dims', nb_dense_dims))
+        self.batch_size = int(param_dict.get('batch_size', batch_size))
+        self.nb_epochs = int(param_dict.get('nb_epochs', nb_epochs))
+        self.nb_left_tokens = \
+            int(param_dict.get('nb_left_tokens', nb_left_tokens))
+        self.nb_right_tokens = \
+            int(param_dict.get('nb_right_tokens', nb_right_tokens))
+        self.nb_context_tokens = self.nb_left_tokens + self.nb_right_tokens
+        self.nb_embedding_dims = \
+            int(param_dict.get('nb_embedding_dims', nb_embedding_dims))
+        self.model_dir = param_dict.get('model_dir', model_dir)
+        self.postcorrect = bool(param_dict.get('postcorrect', postcorrect))
+        self.nb_filters = int(param_dict.get('nb_filters', nb_filters))
+        self.filter_length = \
+            int(param_dict.get('filter_length', filter_length))
+        self.focus_repr = param_dict.get('focus_repr', focus_repr)
+        self.dropout_level = \
+            float(param_dict.get('dropout_level', dropout_level))
+        self.include_token = param_dict.get('include_token', include_token)
+        self.include_context = \
+            param_dict.get('include_context', include_context)
+        self.include_lemma = param_dict.get('include_lemma', include_lemma)
+        self.include_pos = param_dict.get('include_pos', include_pos)
+        self.include_morph = param_dict.get('include_morph', include_morph)
+        self.include_dev = param_dict.get('include_dev', include_dev)
+        self.include_test = param_dict.get('include_test', include_test)
+        self.min_token_freq_emb = \
+            int(param_dict.get('min_token_freq_emb', min_token_freq_emb))
+        self.halve_lr_at = int(param_dict.get('halve_lr_at', halve_lr_at))
+        self.max_token_len = \
+            int(param_dict.get('max_token_len', max_token_len))
+        self.max_lemma_len = \
+            int(param_dict.get('max_lemma_len', max_lemma_len))
+        self.min_lem_cnt = int(param_dict.get('min_lem_cnt', min_lem_cnt))
+        self.char_embed_dim = \
+            int(param_dict.get('char_embed_dim', char_embed_dim))
+        self.model = param_dict.get('model', model)
 
-        else:
-            param_dict = utils.get_param_dict(self.config_path)
-            print('Using params from config file: ', param_dict)
-            self.nb_encoding_layers = int(param_dict['nb_encoding_layers'])
-            self.nb_epochs = int(param_dict['nb_epochs'])
-            self.nb_dense_dims = int(param_dict['nb_dense_dims'])
-            self.batch_size = int(param_dict['batch_size'])
-            self.nb_left_tokens = int(param_dict['nb_left_tokens'])
-            self.nb_right_tokens = int(param_dict['nb_right_tokens'])
-            self.nb_context_tokens = self.nb_left_tokens + self.nb_right_tokens
-            self.nb_embedding_dims = int(param_dict['nb_embedding_dims'])
-            self.model_dir = param_dict['model_dir']
-            self.postcorrect = bool(param_dict['postcorrect'])
-            self.nb_filters = int(param_dict['nb_filters'])
-            self.filter_length = int(param_dict['filter_length'])
-            self.focus_repr = param_dict['focus_repr']
-            self.dropout_level = float(param_dict['dropout_level'])
-            self.include_token = param_dict['include_token']
-            self.include_context = param_dict['include_context']
-            self.include_lemma = param_dict['include_lemma']
-            self.include_pos = param_dict['include_pos']
-            self.include_morph = param_dict['include_morph']
-            self.include_dev = param_dict['include_dev']
-            self.include_test = param_dict['include_test']
-            self.min_token_freq_emb = int(param_dict['min_token_freq_emb'])
-            self.halve_lr_at = int(param_dict['halve_lr_at'])
-            self.max_token_len = int(param_dict['max_token_len'])
-            self.min_lem_cnt = int(param_dict['min_lem_cnt'])
-            if "curr_nb_epochs" in param_dict:
-                self.curr_nb_epochs = int(param_dict["curr_nb_epochs"])
+        if overwrite is not None:
+            # Overwrite should be a dict of attributes to update the tagger
+            for key, value in overwrite.items():
+                self.__setattr__(key, value)
 
-        # create a models directory if it isn't there already:
+        # create a models directory if it isn't there already
         if not os.path.isdir(self.model_dir):
             os.mkdir(model_dir)
 
@@ -153,38 +122,30 @@ class Tagger():
 
     def load(self):
         print('Re-loading preprocessor...')
-        self.preprocessor = pickle.load(open(os.sep.join((self.model_dir, \
-                                    'preprocessor.p')), 'rb'))
+        self.preprocessor = Preprocessor(categorical=self.model == 'Keras')
+        self.preprocessor.load(model_dir=self.model_dir,
+                               max_token_len=self.max_token_len,
+                               max_lemma_len=self.max_lemma_len,
+                               focus_repr=self.focus_repr,
+                               include_lemma=self.include_lemma,
+                               include_pos=self.include_pos)
+
         print('Re-loading pretrainer...')
-        self.pretrainer = pickle.load(open(os.sep.join((self.model_dir, \
-                                    'pretrainer.p')), 'rb'))
+        self.pretrainer = Pretrainer()
+        self.pretrainer.load(model_dir=self.model_dir,
+                             nb_left_tokens=self.nb_left_tokens,
+                             nb_right_tokens=self.nb_right_tokens)
+
         print('Re-building model...')
-        self.model = model_from_json(open(os.sep.join((self.model_dir, 'model_architecture.json'))).read())
-        self.model.load_weights(os.sep.join((self.model_dir, 'model_weights.hdf5')))
+        self.model = MODELS[self.model].load(
+            self.model_dir,
+            include_lemma=self.include_lemma,
+            include_pos=self.include_pos,
+            include_morph=self.include_morph)
 
-        loss_dict = {}
-        idx_cnt = 0
-        if self.include_lemma:
-            loss_dict['lemma_out'] = 'categorical_crossentropy'
-            self.lemma_out_idx = idx_cnt
-            idx_cnt += 1
-            print('Loading known lemmas...')
-            self.known_lemmas = pickle.load(open(os.sep.join((self.model_dir, \
-                                    'known_lemmas.p')), 'rb'))
-
-        if self.include_pos:
-            loss_dict['pos_out'] = 'categorical_crossentropy'
-            self.pos_out_idx = idx_cnt
-            idx_cnt += 1
-        if self.include_morph:
-            self.morph_out_idx = idx_cnt
-            idx_cnt += 1
-            if self.include_morph == 'label':
-              loss_dict['morph_out'] = 'categorical_crossentropy'
-            elif self.include_morph == 'multilabel':
-              loss_dict['morph_out'] = 'binary_crossentropy'
-
-        self.model.compile(optimizer='adadelta', loss=loss_dict)
+        print('Loading known lemmas...')
+        lemmas_path = os.sep.join((self.model_dir, 'known_lemmas.txt'))
+        self.known_lemmas = set([l.strip() for l in open(lemmas_path, 'r')])
 
     def setup_to_train(self, train_data=None, dev_data=None, test_data=None, build=True):
         if build:
@@ -198,69 +159,71 @@ class Tagger():
             self.test_tokens = test_data['token']
         if self.include_dev:
             self.dev_tokens = dev_data['token']
-        if build:
-            idx_cnt = 0
+            
         if self.include_lemma:
-            if build:
-                self.lemma_out_idx = idx_cnt
-                idx_cnt += 1
             self.train_lemmas = train_data['lemma']
             self.known_lemmas = set(self.train_lemmas)
             if self.include_dev:
-                self.dev_lemmas = dev_data['lemma']            
+                self.dev_lemmas = dev_data['lemma']
             if self.include_test:
                 self.test_lemmas = test_data['lemma']
+
         if self.include_pos:
-            if build:
-                self.pos_out_idx = idx_cnt
-                idx_cnt += 1
             self.train_pos = train_data['pos']
             if self.include_dev:
                 self.dev_pos = dev_data['pos']
             if self.include_test:
                 self.test_pos = test_data['pos']
+
         if self.include_morph:
-            if build:
-                self.morph_out_idx = idx_cnt
             self.train_morph = train_data['morph']
             if self.include_dev:
                 self.dev_morph = dev_data['morph']
             if self.include_test:
                 self.test_morph = test_data['morph']
 
-        if build:
-            self.preprocessor = Preprocessor().fit(tokens=self.train_tokens,
-                                                   lemmas=self.train_lemmas,
-                                                   pos=self.train_pos,
-                                                   morph=self.train_morph,
-                                                   include_lemma=self.include_lemma,
-                                                   include_morph=self.include_morph,
-                                                   max_token_len=self.max_token_len,
-                                                   focus_repr=self.focus_repr,
-                                                   min_lem_cnt=self.min_lem_cnt,
-                                                   )
-            self.pretrainer = Pretrainer(nb_left_tokens=self.nb_left_tokens,
-                                         nb_right_tokens=self.nb_right_tokens,
-                                         size=self.nb_embedding_dims,
-                                         minimum_count=self.min_token_freq_emb)
-            self.pretrainer.fit(tokens=self.train_tokens)
+        self.preprocessor = Preprocessor(categorical=self.model == 'Keras')
+        self.preprocessor.fit(
+            tokens=self.train_tokens,
+            lemmas=self.train_lemmas,
+            pos=self.train_pos,
+            morph=self.train_morph,
+            include_lemma=self.include_lemma,
+            include_morph=self.include_morph,
+            max_token_len=self.max_token_len,
+            max_lemma_len=self.max_lemma_len,
+            focus_repr=self.focus_repr,
+            min_lem_cnt=self.min_lem_cnt)
 
-        train_transformed = self.preprocessor.transform(tokens=self.train_tokens,
-                                               lemmas=self.train_lemmas,
-                                               pos=self.train_pos,
-                                               morph=self.train_morph)
+        self.max_token_len = self.preprocessor.max_token_len
+        self.max_lemma_len = self.preprocessor.max_lemma_len
+
+        self.pretrainer = Pretrainer(nb_left_tokens=self.nb_left_tokens,
+                                     nb_right_tokens=self.nb_right_tokens,
+                                     size=self.nb_embedding_dims,
+                                     minimum_count=self.min_token_freq_emb)
+        self.pretrainer.fit(tokens=self.train_tokens)
+
+        train_transformed = self.preprocessor.transform(
+            tokens=self.train_tokens,
+            lemmas=self.train_lemmas,
+            pos=self.train_pos,
+            morph=self.train_morph)
         if self.include_dev:
-            dev_transformed = self.preprocessor.transform(tokens=self.dev_tokens,
-                                        lemmas=self.dev_lemmas,
-                                        pos=self.dev_pos,
-                                        morph=self.dev_morph)
+            dev_transformed = self.preprocessor.transform(
+                tokens=self.dev_tokens,
+                lemmas=self.dev_lemmas,
+                pos=self.dev_pos,
+                morph=self.dev_morph)
         if self.include_test:
-            test_transformed = self.preprocessor.transform(tokens=self.test_tokens,
-                                        lemmas=self.test_lemmas,
-                                        pos=self.test_pos,
-                                        morph=self.test_morph)
+            test_transformed = self.preprocessor.transform(
+                tokens=self.test_tokens,
+                lemmas=self.test_lemmas,
+                pos=self.test_pos,
+                morph=self.test_morph)
 
         self.train_X_focus = train_transformed['X_focus']
+
         if self.include_dev:
             self.dev_X_focus = dev_transformed['X_focus']
         if self.include_test:
@@ -287,66 +250,72 @@ class Tagger():
             if self.include_test:
                 self.test_X_morph = test_transformed['X_morph']
 
-        self.train_contexts = self.pretrainer.transform(tokens=self.train_tokens)
+        self.train_contexts = self.pretrainer.transform(
+            tokens=self.train_tokens)
         if self.include_dev:
-            self.dev_contexts = self.pretrainer.transform(tokens=self.dev_tokens)
+            self.dev_contexts = self.pretrainer.transform(
+                tokens=self.dev_tokens)
         if self.include_test:
-            self.test_contexts = self.pretrainer.transform(tokens=self.test_tokens)
-        if build:
-            print('Building model...')
-            nb_tags = None
-            try:
-                nb_tags = len(self.preprocessor.pos_encoder.classes_)
-            except AttributeError:
-                pass
-            nb_morph_cats = None
-            try:
-                nb_morph_cats = self.preprocessor.nb_morph_cats
-            except AttributeError:
-                pass
-            max_token_len, token_char_dict = None, None
-            try:
-                max_token_len = self.preprocessor.max_token_len
-                token_char_dict = self.preprocessor.token_char_dict
-            except AttributeError:
-                pass
-            max_lemma_len, lemma_char_dict = None, None
-            try:
-                max_lemma_len = self.preprocessor.max_lemma_len
-                lemma_char_dict = self.preprocessor.lemma_char_dict
-            except AttributeError:
-                pass
-            nb_lemmas = None
-            try:
-                nb_lemmas = len(self.preprocessor.lemma_encoder.classes_)
-            except AttributeError:
-                pass
-            self.model = build_model(token_len=max_token_len,
-                                 token_char_vector_dict=token_char_dict,
-                                 lemma_len=max_lemma_len,
-                                 nb_tags=nb_tags,
-                                 nb_morph_cats=nb_morph_cats,
-                                 lemma_char_vector_dict=lemma_char_dict,
-                                 nb_encoding_layers=self.nb_encoding_layers,
-                                 nb_dense_dims=self.nb_dense_dims,
-                                 nb_embedding_dims=self.nb_embedding_dims,
-                                 nb_train_tokens=len(self.pretrainer.train_token_vocab),
-                                 nb_context_tokens=self.nb_context_tokens,
-                                 pretrained_embeddings=self.pretrainer.pretrained_embeddings,
-                                 include_token=self.include_token,
-                                 include_context=self.include_context,
-                                 include_lemma=self.include_lemma,
-                                 include_pos=self.include_pos,
-                                 include_morph=self.include_morph,
-                                 nb_filters = self.nb_filters,
-                                 filter_length = self.filter_length,
-                                 focus_repr = self.focus_repr,
-                                 dropout_level = self.dropout_level,
-                                 nb_lemmas = nb_lemmas,
-                                )
-            self.save()
-            
+            self.test_contexts = self.pretrainer.transform(
+                tokens=self.test_tokens)
+
+        print('Building model...')
+        nb_tags = None
+        try:
+            nb_tags = len(self.preprocessor.pos_encoder.classes_)
+        except AttributeError:
+            pass
+        nb_morph_cats = None
+        try:
+            nb_morph_cats = self.preprocessor.nb_morph_cats
+        except AttributeError:
+            pass
+        max_token_len, token_char_dict = None, None
+        try:
+            max_token_len = self.preprocessor.max_token_len
+            token_char_dict = self.preprocessor.token_char_lookup
+        except AttributeError:
+            pass
+        max_lemma_len, lemma_char_dict = None, None
+        try:
+            max_lemma_len = self.preprocessor.max_lemma_len
+            lemma_char_dict = self.preprocessor.lemma_char_lookup
+        except AttributeError:
+            pass
+        nb_lemmas = None
+        try:
+            nb_lemmas = len(self.preprocessor.lemma_encoder.classes_)
+        except AttributeError:
+            pass
+
+        self.model = MODELS[self.model](
+            token_len=max_token_len,
+            token_char_vector_dict=token_char_dict,
+            lemma_len=max_lemma_len,
+            nb_tags=nb_tags,
+            nb_morph_cats=nb_morph_cats,
+            lemma_char_vector_dict=lemma_char_dict,
+            nb_encoding_layers=self.nb_encoding_layers,
+            nb_dense_dims=self.nb_dense_dims,
+            nb_embedding_dims=self.nb_embedding_dims,
+            nb_train_tokens=len(self.pretrainer.train_token_vocab),
+            nb_context_tokens=self.nb_context_tokens,
+            pretrained_embeddings=self.pretrainer.pretrained_embeddings,
+            include_token=self.include_token,
+            include_context=self.include_context,
+            include_lemma=self.include_lemma,
+            include_pos=self.include_pos,
+            include_morph=self.include_morph,
+            nb_filters=self.nb_filters,
+            filter_length=self.filter_length,
+            focus_repr=self.focus_repr,
+            dropout_level=self.dropout_level,
+            nb_lemmas=nb_lemmas,
+            char_embed_dim=self.char_embed_dim,
+            batch_size=self.batch_size)
+
         self.setup = True
+        self.save()
 
     def train(self, nb_epochs=None):
         if nb_epochs:
@@ -357,9 +326,13 @@ class Tagger():
 
     def print_stats(self):
         print('Train stats:')
-        utils.stats(tokens=self.train_tokens, lemmas=self.train_lemmas, known=self.preprocessor.known_tokens)
+        utils.stats(tokens=self.train_tokens,
+                    lemmas=self.train_lemmas,
+                    known=self.preprocessor.known_tokens)
         print('Test stats:')
-        utils.stats(tokens=self.test_tokens, lemmas=self.test_lemmas, known=self.preprocessor.known_tokens)
+        utils.stats(tokens=self.test_tokens,
+                    lemmas=self.test_lemmas,
+                    known=self.preprocessor.known_tokens)
 
     def test(self, multilabel_threshold=0.5, verbose=False):
         """ Run tests evaluation with prediction
@@ -369,7 +342,8 @@ class Tagger():
         :return: Score Dictionary
         """
         if not self.include_test:
-            raise ValueError('Please do not call .test() if no test data is available.')
+            raise ValueError(
+                'Please do not call .test() if no test data is available.')
 
         score_dict = {}
 
@@ -380,123 +354,71 @@ class Tagger():
         if self.include_context:
             test_in['context_in'] = self.test_contexts
 
-        test_preds = self.model.predict(test_in,
-                                batch_size=self.batch_size)
+        test_preds = self.model.predict(test_in, batch_size=self.batch_size)
 
         if isinstance(test_preds, np.ndarray):
             test_preds = [test_preds]
 
         if self.include_lemma:
-            if verbose:
-                print('::: Test scores (lemmas) :::')
-
-            pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=test_preds[self.lemma_out_idx])
+            print('::: Test scores (lemmas) :::')
+            pred_lemmas = self.preprocessor.inverse_transform_lemmas(
+                predictions=test_preds['lemma_out'])
             if self.postcorrect:
                 for i in range(len(pred_lemmas)):
                     if pred_lemmas[i] not in self.known_lemmas:
-                        pred_lemmas[i] = min(self.known_lemmas, key=lambda x: editdistance.eval(x, pred_lemmas[i]))
+                        pred_lemmas[i] = min(
+                            self.known_lemmas,
+                            key=lambda x: editdistance.eval(x, pred_lemmas[i]))
 
             score_dict['test_lemma'] = evaluation.single_label_accuracies(
                 gold=self.test_lemmas,
                 silver=pred_lemmas,
                 test_tokens=self.test_tokens,
-                known_tokens=self.preprocessor.known_tokens,
-                print_scores=verbose
-            )
+                known_tokens=self.preprocessor.known_tokens)
 
         if self.include_pos:
-            if verbose:
-                print('::: Test scores (pos) :::')
-            pred_pos = self.preprocessor.inverse_transform_pos(predictions=test_preds[self.pos_out_idx])
+            print('::: Test scores (pos) :::')
+            pred_pos = self.preprocessor.inverse_transform_pos(
+                predictions=test_preds['pos_out'])
             score_dict['test_pos'] = evaluation.single_label_accuracies(
                 gold=self.test_pos,
                 silver=pred_pos,
                 test_tokens=self.test_tokens,
-                known_tokens=self.preprocessor.known_tokens,
-                print_scores=verbose
-            )
-        
+                known_tokens=self.preprocessor.known_tokens)
+
         if self.include_morph:
-            if verbose:
-                print('::: Test scores (morph) :::')
-
+            print('::: Test scores (morph) :::')
             pred_morph = self.preprocessor.inverse_transform_morph(
-                predictions=test_preds[self.morph_out_idx],
-                threshold=multilabel_threshold
-            )
-            eval_call = None
+                predictions=test_preds['morph_out'],
+                threshold=multilabel_threshold)
             if self.include_morph == 'label':
-                eval_call = evaluation.single_label_accuracies
-            elif self.include_morph == 'multilabel':
-                eval_call = evaluation.multilabel_accuracies
-
-            if eval_call is not None:
-                score_dict['test_morph'] = eval_call(
+                score_dict['test_morph'] = evaluation.single_label_accuracies(
                     gold=self.test_morph,
                     silver=pred_morph,
                     test_tokens=self.test_tokens,
-                    known_tokens=self.preprocessor.known_tokens,
-                    print_scores=verbose
-                )
+                    known_tokens=self.preprocessor.known_tokens)
+            elif self.include_morph == 'multilabel':
+                score_dict['test_morph'] = evaluation.multilabel_accuracies(
+                    gold=self.test_morph,
+                    silver=pred_morph,
+                    test_tokens=self.test_tokens,
+                    known_tokens=self.preprocessor.known_tokens)
+
         return score_dict
 
     def save(self):
         # save architecture:
-        json_string = self.model.to_json()
-        with open(os.sep.join((self.model_dir, 'model_architecture.json')), 'wb') as f:
-            f.write(json_string.encode())
-        # save weights:
-        self.model.save_weights(os.sep.join((self.model_dir, 'model_weights.hdf5')), overwrite=True)
+        self.model.save(self.model_dir)
+
         # save preprocessor:
-        with open(os.sep.join((self.model_dir, 'preprocessor.p')), 'wb') as f:
-            pickle.dump(self.preprocessor, f)
-        # save pretrainer:
-        with open(os.sep.join((self.model_dir, 'pretrainer.p')), 'wb') as f:
-            pickle.dump(self.pretrainer, f)
+        self.preprocessor.save(self.model_dir)
+        self.pretrainer.save(self.model_dir)
+
         if self.include_lemma:
-            # save known lemmas:
-            with open(os.sep.join((self.model_dir, 'known_lemmas.p')), 'wb') as f:
-                pickle.dump(self.known_lemmas, f)
+            lemmas_path = os.sep.join((self.model_dir, 'known_lemmas.txt'))
+            with open(lemmas_path, 'w') as f:
+                f.write('\n'.join(sorted(self.known_lemmas)))
 
-        self.save_params()
-        
-        # plot current embeddings:
-        if self.include_context:
-            layer_dict = dict([(layer.name, layer) for layer in self.model.layers])
-            weights = layer_dict['context_embedding'].get_weights()[0]
-            X = np.array([weights[self.pretrainer.train_token_vocab.index(w), :] \
-                    for w in self.pretrainer.mfi \
-                      if w in self.pretrainer.train_token_vocab], dtype='float32')
-            # dimension reduction:
-            tsne = TSNE(n_components=2)
-            coor = tsne.fit_transform(X) # unsparsify
-            plt.clf(); sns.set_style('dark')
-            sns.plt.rcParams['axes.linewidth'] = 0.4
-            fig, ax1 = sns.plt.subplots()  
-            labels = self.pretrainer.mfi
-            # first plot slices:
-            x1, x2 = coor[:,0], coor[:,1]
-            ax1.scatter(x1, x2, 100, edgecolors='none', facecolors='none')
-            # clustering on top (add some colouring):
-            clustering = AgglomerativeClustering(linkage='ward',
-                            affinity='euclidean', n_clusters=8)
-            clustering.fit(coor)
-            # add names:
-            for x, y, name, cluster_label in zip(x1, x2, labels, clustering.labels_):
-                ax1.text(x, y, name, ha='center', va="center",
-                         color=plt.cm.spectral(cluster_label / 10.),
-                         fontdict={'family': 'sans-serif', 'size': 8})
-            # control aesthetics:
-            ax1.set_xlabel(''); ax1.set_ylabel('')
-            ax1.set_xticklabels([]); ax1.set_xticks([])
-            ax1.set_yticklabels([]); ax1.set_yticks([])
-            sns.plt.savefig(os.sep.join((self.model_dir, 'embed_after.pdf')),
-                            bbox_inches=0)
-            sns.plt.close()
-
-    def save_params(self):
-        """ Save the current params into the model dir
-        """
         with open(os.sep.join((self.model_dir, 'config.txt')), 'w') as F:
             F.write('# Parameter file\n\n[global]\n')
             F.write('nb_encoding_layers = '+str(self.nb_encoding_layers)+'\n')
@@ -521,13 +443,15 @@ class Tagger():
             F.write('nb_epochs = '+str(self.nb_epochs)+'\n')
             F.write('halve_lr_at = '+str(self.halve_lr_at)+'\n')
             F.write('max_token_len = '+str(self.max_token_len)+'\n')
+            F.write('max_lemma_len = '+str(self.max_lemma_len)+'\n')
             F.write('min_token_freq_emb = '+str(self.min_token_freq_emb)+'\n')
             F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
-            F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
+            F.write('char_embed_dim = '+str(self.char_embed_dim)+'\n')
 
-    def epoch(self, autosave=True, eval_test=False):
+    def epoch(self, autosave=True):
         if not self.setup:
-            raise ValueError('Not set up yet... Call Tagger.setup_() first.')
+            raise ValueError(
+                'Not set up yet... Call Tagger.setup_to_train() first.')
 
         # update nb of epochs ran so far:
         self.curr_nb_epochs += 1
@@ -536,10 +460,7 @@ class Tagger():
         if self.curr_nb_epochs and self.halve_lr_at:
             # update learning rate at specific points:
             if self.curr_nb_epochs % self.halve_lr_at == 0:
-                old_lr = K.get_value(self.model.optimizer.lr)
-                new_lr = np.float32(old_lr * 0.5)
-                K.set_value(self.model.optimizer.lr, new_lr)
-                print('\t- Lowering learning rate > was:', old_lr, ', now:', new_lr)
+                self.model.adjust_lr()
 
         # get inputs and outputs straight:
         train_in, train_out = {}, {}
@@ -547,7 +468,6 @@ class Tagger():
             train_in['focus_in'] = self.train_X_focus
         if self.include_context:
             train_in['context_in'] = self.train_contexts
-
         if self.include_lemma:
             train_out['lemma_out'] = self.train_X_lemma
         if self.include_pos:
@@ -555,30 +475,10 @@ class Tagger():
         if self.include_morph:
             train_out['morph_out'] = self.train_X_morph
 
-        # Train once
-        self.model.fit(train_in, train_out, nb_epoch=1, shuffle=True, batch_size=self.batch_size)
+        self.model.epoch(train_in, train_out)
 
-        def run_eval():
-            score_dict = self.eval(train_in=train_in)
-            if eval_test is True:
-                score_dict.update(self.test())
-            return score_dict
-
-        score_dict = self.logger.epoch(self.curr_nb_epochs, run_eval)
-
-        if autosave:
-            self.save()
-        
-        return score_dict
-
-    def eval(self, train_in):
-        """ Evaluate current epoch
-
-        :param train_in: Data from training
-        :return:
-        """
-        # Get train preds:
-        train_preds = self.model.predict(train_in, batch_size=self.batch_size)
+        # get train preds:
+        train_preds = self.model.predict(train_in)
         if isinstance(train_preds, np.ndarray):
             train_preds = [train_preds]
 
@@ -591,7 +491,8 @@ class Tagger():
             if self.include_context:
                 dev_in['context_in'] = self.dev_contexts
 
-            dev_preds = self.model.predict(dev_in, batch_size=self.batch_size)
+            dev_preds = self.model.predict(dev_in)
+
             if isinstance(dev_preds, np.ndarray):
                 dev_preds = [dev_preds]
 
@@ -608,30 +509,24 @@ class Tagger():
 
         score_dict = {}
         if self.include_lemma:
-            if verbose is True:
-                print('::: Train scores (lemmas) :::')
-            pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=train_preds[self.lemma_out_idx])
+            print('::: Train scores (lemmas) :::')
+            pred_lemmas = self.preprocessor.inverse_transform_lemmas(
+                predictions=train_preds['lemma_out'])
             score_dict['train_lemma'] = evaluation.single_label_accuracies(
                 gold=self.train_lemmas,
                 silver=pred_lemmas,
                 test_tokens=self.train_tokens,
-                known_tokens=self.preprocessor.known_tokens,
-                print_scores=verbose
-            )
+                known_tokens=self.preprocessor.known_tokens)
 
             if self.include_dev:
-
-                if verbose is True:
-                    print('::: Dev scores (lemmas) :::')
-
-                pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=dev_preds[self.lemma_out_idx])
+                print('::: Dev scores (lemmas) :::')
+                pred_lemmas = self.preprocessor.inverse_transform_lemmas(
+                    predictions=dev_preds['lemma_out'])
                 score_dict['dev_lemma'] = evaluation.single_label_accuracies(
                     gold=self.dev_lemmas,
                     silver=pred_lemmas,
                     test_tokens=self.dev_tokens,
-                    known_tokens=self.preprocessor.known_tokens,
-                    print_scores=verbose
-                )
+                    known_tokens=self.preprocessor.known_tokens)
 
                 if self.postcorrect:
                     if verbose is True:
@@ -639,121 +534,114 @@ class Tagger():
 
                     for i in range(len(pred_lemmas)):
                         if pred_lemmas[i] not in self.known_lemmas:
-                            pred_lemmas[i] = min(self.known_lemmas, key=lambda x: editdistance.eval(x, pred_lemmas[i]))
+                            pred_lemmas[i] = min(
+                                self.known_lemmas,
+                                key=lambda x: editdistance.eval(x, pred_lemmas[i]))
+
                     score_dict['dev_lemma_postcorrect'] = evaluation.single_label_accuracies(
                         gold=self.dev_lemmas,
                         silver=pred_lemmas,
                         test_tokens=self.dev_tokens,
-                        known_tokens=self.preprocessor.known_tokens,
-                        print_scores=verbose
-                    )
+                        known_tokens=self.preprocessor.known_tokens)
 
         if self.include_pos:
-
-            if verbose is True:
-                print('::: Train scores (pos) :::')
-
-            pred_pos = self.preprocessor.inverse_transform_pos(predictions=train_preds[self.pos_out_idx])
+            print('::: Train scores (pos) :::')
+            pred_pos = self.preprocessor.inverse_transform_pos(
+                predictions=train_preds['pos_out'])
             score_dict['train_pos'] = evaluation.single_label_accuracies(
                 gold=self.train_pos,
                 silver=pred_pos,
                 test_tokens=self.train_tokens,
-                known_tokens=self.preprocessor.known_tokens,
-                print_scores=verbose
-            )
-
+                known_tokens=self.preprocessor.known_tokens)
+            
             if self.include_dev:
-
-                if verbose is True:
-                    print('::: Dev scores (pos) :::')
-
-                pred_pos = self.preprocessor.inverse_transform_pos(predictions=dev_preds[self.pos_out_idx])
+                print('::: Dev scores (pos) :::')
+                pred_pos = self.preprocessor.inverse_transform_pos(
+                    predictions=dev_preds['pos_out'])
                 score_dict['dev_pos'] = evaluation.single_label_accuracies(
                     gold=self.dev_pos,
                     silver=pred_pos,
                     test_tokens=self.dev_tokens,
-                    known_tokens=self.preprocessor.known_tokens,
-                    print_scores=verbose
-                )
+                    known_tokens=self.preprocessor.known_tokens)
 
         if self.include_morph:
+            print('::: Train scores (morph) :::')
+            pred_morph = self.preprocessor.inverse_transform_morph(
+                predictions=train_preds['morph_out'])
 
-            if verbose is True:
-                print('::: Train scores (morph) :::')
-
-            pred_morph = self.preprocessor.inverse_transform_morph(predictions=train_preds[self.morph_out_idx])
             if self.include_morph == 'label':
                 score_dict['train_morph'] = evaluation.single_label_accuracies(
                     gold=self.train_morph,
                     silver=pred_morph,
                     test_tokens=self.train_tokens,
-                    known_tokens=self.preprocessor.known_tokens,
-                    print_scores=verbose
-                )
+                    known_tokens=self.preprocessor.known_tokens)
+
             elif self.include_morph == 'multilabel':
                 score_dict['train_morph'] = evaluation.multilabel_accuracies(
                     gold=self.train_morph,
                     silver=pred_morph,
                     test_tokens=self.train_tokens,
-                    known_tokens=self.preprocessor.known_tokens,
-                    print_scores=verbose
-                )
+                    known_tokens=self.preprocessor.known_tokens)
 
             if self.include_dev:
-                if verbose is True:
-                    print('::: Dev scores (morph) :::')
+                print('::: Dev scores (morph) :::')
+                pred_morph = self.preprocessor.inverse_transform_morph(
+                    predictions=dev_preds['morph_out'])
 
-                pred_morph = self.preprocessor.inverse_transform_morph(predictions=dev_preds[self.morph_out_idx])
                 if self.include_morph == 'label':
                     score_dict['dev_morph'] = evaluation.single_label_accuracies(
                         gold=self.train_morph,
                         silver=pred_morph,
                         test_tokens=self.dev_tokens,
-                        known_tokens=self.preprocessor.known_tokens,
-                        print_scores=True
-                    )
+                        known_tokens=self.preprocessor.known_tokens)
+
                 elif self.include_morph == 'multilabel':
                     score_dict['dev_morph'] = evaluation.multilabel_accuracies(
                         gold=self.train_morph,
                         silver=pred_morph,
                         test_tokens=self.dev_tokens,
-                        known_tokens=self.preprocessor.known_tokens,
-                        print_scores=True
-                    )
+                        known_tokens=self.preprocessor.known_tokens)
+
+        if autosave:
+            self.save()
+
         return score_dict
 
     def annotate(self, tokens):
         X_focus = self.preprocessor.transform(tokens=tokens)['X_focus']
         X_context = self.pretrainer.transform(tokens=tokens)
-        
-        # get predictions:
+
         new_in = {}
         if self.include_token:
             new_in['focus_in'] = X_focus
         if self.include_context:
             new_in['context_in'] = X_context
-        preds = self.model.predict(new_in)
 
+        preds = self.model.predict(new_in)
         if isinstance(preds, np.ndarray):
             preds = [preds]
-        
+
         annotation_dict = {'tokens': tokens}
         if self.include_lemma:
-            pred_lemmas = self.preprocessor.inverse_transform_lemmas(predictions=preds[self.lemma_out_idx])
+            pred_lemmas = self.preprocessor.inverse_transform_lemmas(
+                predictions=preds['lemma_out'])
             annotation_dict['lemmas'] = pred_lemmas
             if self.postcorrect:
                 for i in range(len(pred_lemmas)):
                     if pred_lemmas[i] not in self.known_lemmas:
-                        pred_lemmas[i] = min(self.known_lemmas,
-                                            key=lambda x: editdistance.eval(x, pred_lemmas[i]))
+                        pred_lemmas[i] = min(
+                            self.known_lemmas,
+                            key=lambda x: editdistance.eval(x, pred_lemmas[i]))
                 annotation_dict['postcorrect_lemmas'] = pred_lemmas
 
         if self.include_pos:
-            pred_pos = self.preprocessor.inverse_transform_pos(predictions=preds[self.pos_out_idx])
+            pred_pos = self.preprocessor.inverse_transform_pos(
+                predictions=preds['pos_out'])
             annotation_dict['pos'] = pred_pos
-        
+
         if self.include_morph:
-            pred_morph = self.preprocessor.inverse_transform_morph(predictions=preds[self.morph_out_idx])
+            pred_morph = self.preprocessor.inverse_transform_morph(
+                predictions=preds['morph_out'])
             annotation_dict['morph'] = pred_morph
 
         return annotation_dict
