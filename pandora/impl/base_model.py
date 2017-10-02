@@ -122,7 +122,7 @@ class BaseModel(object):
         """
         raise NotImplementedError
 
-    def predict(self, input_data):
+    def predict(self, input_data, batch_size=None):
         """
         Returns predictions for the data in `input_data`:
 
@@ -144,6 +144,7 @@ class BaseModel(object):
                     Each instance is represented by integer indices
                     corresponding to the original tokens
                     (padded to a uniform length if necessary).
+        batch_size : int or None, optional
 
         Returns
         ===========

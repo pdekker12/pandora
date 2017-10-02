@@ -330,12 +330,12 @@ class PyTorchModel(nn.Module, BaseModel):
 
         return epoch_losses
 
-    def predict(self, input_data):
+    def predict(self, input_data, batch_size=None):
         self.move_to_gpu(gpu=self.gpu)  # eventually move to gpu
         self.eval()
         out = {}
         batches = BatchIterator.from_numpy(
-            self.batch_size, input_data, dev=True, gpu=self.gpu)
+            batch_size or self.batch_size, input_data, dev=True, gpu=self.gpu)
 
         for batch in range(len(batches)):
             src, trg = batches[batch]

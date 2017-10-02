@@ -286,8 +286,9 @@ class KerasModel(BaseModel):
                        shuffle=True,
                        batch_size=self.batch_size)
 
-    def predict(self, input_data):
-        out = self.model.predict(input_data, batch_size=self.batch_size)
+    def predict(self, input_data, batch_size=None):
+        out = self.model.predict(
+            input_data, batch_size=batch_size or self.batch_size)
         labels = []
         if self.include_lemma:
             labels.append('lemma_out')
