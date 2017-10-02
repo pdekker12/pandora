@@ -23,7 +23,7 @@ setup(
         "h5py==2.7.0",
         "keras==2.0.4",
         "nltk==3.2.2",
-        "numpy==1.12.1",
+        "numpy==1.13.3",
         "scikit-learn==0.18.1",
         "seaborn==0.7.1",
         "{}==1.1.0".format(tensorflow_version),
