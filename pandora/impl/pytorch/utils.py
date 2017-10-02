@@ -38,18 +38,13 @@ class BatchIterator(object):
         self.trg = batchify(trg, batch_size) if trg is not None else None
 
     def __getitem__(self, idx):
-        src = {k: Variable(v, volatile=self.dev)
+        src = {k: Variable(v.cuda() if self.gpu else v, volatile=self.dev)
                for k, v in self.src[idx].items()}
         if self.trg is None:
             trg = None
         else:
-            trg = {k: Variable(v, volatile=self.dev)
+            trg = {k: Variable(v.cuda() if self.gpu else v, volatile=self.dev)
                    for k, v in self.trg[idx].items()}
-
-        if self.gpu:
-            src = src.cuda()
-            if trg is not None:
-                trg = trg.cuda()
 
         return src, trg
 
@@ -69,6 +64,7 @@ class BatchIterator(object):
 class Optimizer(object):
     def __init__(self, params, method, max_norm=10., **kwargs):
         self.params = list(params)
+        self.method = method
         self.optim = getattr(optim, method)(self.params, **kwargs)
         self.max_norm = max_norm
 

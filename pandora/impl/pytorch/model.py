@@ -38,9 +38,7 @@ class PyTorchModel(nn.Module, BaseModel):
                  include_token=True, include_context=True,
                  include_lemma=True, include_pos=True, include_morph=True,
                  nb_filters=100, filter_length=3, focus_repr='recurrent',
-                 batch_size=None, dropout_level=0.15,
-                 # pytorch parameters
-                 gpu=False, method='Adam'):
+                 batch_size=None, dropout_level=0.15):
         self.token_len = token_len  # not used
         self.token_char_vector_dict = token_char_vector_dict
         self.nb_encoding_layers = nb_encoding_layers
@@ -65,7 +63,6 @@ class PyTorchModel(nn.Module, BaseModel):
         self.dropout_level = dropout_level
         self.char_embed_dim = char_embed_dim
         self.batch_size = batch_size
-        self.gpu = gpu
         self.joined_dim = 0
         if self.include_token:
             self.joined_dim = self.nb_dense_dims
@@ -73,36 +70,52 @@ class PyTorchModel(nn.Module, BaseModel):
             self.joined_dim += (self.nb_dense_dims * self.nb_context_tokens)
         super(PyTorchModel, self).__init__()
 
+        # gpu
+        self.gpu = False
+        if torch.cuda.is_available():
+            self.gpu = True
+
+        # build subnets and losses
+        self.token_embeddings, self.token_encoder = None, None
+        self.context_embeddings, self.context_encoder = None, None
+        self.lemma_decoder = None
+        self.pos_decoder = None
+        self.morph_decoder = None
+        self.pos_loss, self.lemma_loss, self.morph_loss = None, None, None
+
         if self.include_token:
             self._build_token_subnet()
         if self.include_context:
             self._build_context_subnet()
         if self.include_lemma:
             self._build_lemma_decoder()
+            self._build_lemma_loss()
         if self.include_pos:
             self._build_pos_decoder()
+            self._build_pos_loss()
         if self.include_morph:
             self._build_morph_decoder()
+            self._build_morph_loss()
 
-        # build losses
-        self.pos_loss, self.lemma_loss, self.morph_loss = None, None, None
-        if self.include_pos:
-            self.pos_loss = nn.NLLLoss()
-        if self.include_lemma:
-            if self.include_lemma == 'generate':
-                # weight down loss on padding
-                lemma_weight = torch.ones(len(self.lemma_char_vector_dict))
-                lemma_weight[self.lemma_char_vector_dict['|']] = 0
-                self.lemma_loss = nn.NLLLoss(weight=lemma_weight)
-            else:
-                self.lemma_loss = nn.NLLLoss()
-        if self.include_morph:
-            if self.include_morph == 'label':
-                self.morph_loss = nn.NLLLoss()
-            else:
-                self.morph_loss = nn.BCELoss()
+        self.optimizer = Optimizer(self.parameters(), 'Adam', lr=0.01)
 
-        self.optimizer = Optimizer(self.parameters(), method, lr=0.01)
+    def _build_lemma_loss(self):
+        if self.include_lemma == 'generate':
+            # weight down loss on padding
+            lemma_weight = torch.ones(len(self.lemma_char_vector_dict))
+            lemma_weight[self.lemma_char_vector_dict['|']] = 0
+            self.lemma_loss = nn.NLLLoss(weight=lemma_weight)
+        else:
+            self.lemma_loss = nn.NLLLoss()
+
+    def _build_pos_loss(self):
+        self.pos_loss = nn.NLLLoss()
+
+    def _build_morph_loss(self):
+        if self.include_morph == 'label':
+            self.morph_loss = nn.NLLLoss()
+        else:
+            self.morph_loss = nn.BCELoss()
 
     def _build_token_subnet(self):
         # embeddings
@@ -190,9 +203,17 @@ class PyTorchModel(nn.Module, BaseModel):
                 nn.Dropout(self.dropout_level),
                 nn.Tanh())
 
+    def move_to_gpu(self, gpu=True):
+        self.gpu = gpu
+        if gpu:
+            self.cuda()
+        else:
+            self.cpu()
+
     def adjust_lr(self, adjust_rate=0.5):
-        for param_group in self.optimizer.optim.param_groups:
-            param_group['lr'] *= adjust_rate
+        if self.optimizer.method == 'SGD':
+            for param_group in self.optimizer.optim.param_groups:
+                param_group['lr'] *= adjust_rate
 
     def forward(self, train_in, train_out):
         """
@@ -280,9 +301,10 @@ class PyTorchModel(nn.Module, BaseModel):
             return self.morph_loss(output, target)
 
     def epoch(self, train_in, train_out):
+        self.move_to_gpu(gpu=self.gpu)  # eventually move to gpu
         self.train()
         batches = BatchIterator.from_numpy(
-            self.batch_size, train_in, trg=train_out, gpu=self.gpu, dev=False)
+            self.batch_size, train_in, trg=train_out, dev=False, gpu=self.gpu)
         progbar = Progbar(target=len(batches) * self.batch_size)
         epoch_losses = defaultdict(float)
 
@@ -309,10 +331,11 @@ class PyTorchModel(nn.Module, BaseModel):
         return epoch_losses
 
     def predict(self, input_data):
+        self.move_to_gpu(gpu=self.gpu)  # eventually move to gpu
         self.eval()
         out = {}
         batches = BatchIterator.from_numpy(
-            self.batch_size, input_data, gpu=self.gpu, dev=True)
+            self.batch_size, input_data, dev=True, gpu=self.gpu)
 
         for batch in range(len(batches)):
             src, trg = batches[batch]
