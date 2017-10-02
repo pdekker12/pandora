@@ -7,6 +7,9 @@ A (language-independent) Tagger-Lemmatizer for Latin & the Vernacular
 ### Install
 
 For now, installation needs to be done by pulling the repository and installing the required libraries yourself.
+Currently, Pandora relies to either Keras (+TensorFlow) or Pytorch as backends. In order to run Pandora with
+the Pytorch backend, you should go to [pytorch.org](https://www.pytorch.org) and follow the installation
+instructions.
 
 #### Environment free
 
