@@ -4,6 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+from pandora.utils import BOS, EOS, PAD
+
 
 class LinearDecoder(nn.Module):
 
@@ -123,12 +125,11 @@ class AttentionalDecoder(nn.Module):
         return h_0, c_0
 
     def decode(self, token_out, context_out, token_context, lemma_out):
-        eos = self.char_dict['|']
-        pad = self.char_dict['$']
+        eos, pad = self.char_dict[EOS], self.char_dict[PAD]
         hidden, hyp = self.init_hidden(context_out), []
 
         # remove eos from target data
-        lemma_out = lemma_out.masked_fill_(lemma_out.eq(eos), pad)[:, :-1]
+        lemma_out = lemma_out.masked_fill_(lemma_out.eq(pad), eos)[:, :-1]
         # (seq_len x batch)
         lemma_out = lemma_out.t()
 
@@ -145,7 +146,7 @@ class AttentionalDecoder(nn.Module):
 
     def generate(self, token_out, context_out, token_context, lemma_out,
                  max_seq_len=20):
-        bos = self.char_dict['%']
+        bos = self.char_dict[BOS]
         hidden, hyp = self.init_hidden(context_out), []
         prev_data = token_out.data.new(token_out.size(0)).long()
         prev = Variable(prev_data.fill_(bos), requires_grad=False)

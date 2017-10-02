@@ -473,7 +473,7 @@ class Tagger():
 
         # update nb of epochs ran so far:
         self.curr_nb_epochs += 1
-        print("-> epoch ", self.curr_nb_epochs, "...")
+        print("-> Epoch ", self.curr_nb_epochs, "...")
 
         if self.curr_nb_epochs and self.halve_lr_at:
             # update learning rate at specific points:

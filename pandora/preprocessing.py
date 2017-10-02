@@ -12,6 +12,7 @@ import numpy as np
 from sklearn.feature_extraction import DictVectorizer
 
 import pandora.utils as utils
+from pandora.utils import PAD, BOS, EOS, UNK
 from pandora.encoding import PandoraLabelEncoder as LabelEncoder
 
 
@@ -28,8 +29,8 @@ def index_characters(tokens, v2u=False, min_freq=5):
     focus_repr = str ('recurrent', 'convolutional')
         Which representation model will be used. in
         the case of recurrent representation, the
-        following special symbols are added to the
-        character vocabulary: ['$', '|', '%'].
+        special symbols <pad>, <eos>, <bos> are added to the
+        character vocabulary.
     v2u : bool (default: False)
         Whether to squash the 'v' and 'u' characters
         to the same index. Useful for some historic
@@ -54,7 +55,7 @@ def index_characters(tokens, v2u=False, min_freq=5):
     vocab = set([t for t, v in vocab.most_common()
                  if v >= min_freq])
 
-    vocab = vocab.union({'$', '|', '%', '<unk>'})
+    vocab = vocab.union({PAD, EOS, BOS, UNK})
 
     char_vocab = tuple(sorted(vocab))
     char_lookup = {}
@@ -86,8 +87,8 @@ def vectorize_tokens(tokens, token_char_lookup, focus_repr,
     focus_repr = str ('recurrent', 'convolutional')
         Which representation model will be used. in
         the case of recurrent representation, the
-        following special symbols are added to the
-        character vocabulary: ['$', '|', '%', '<unk>'].
+        following special symbols <pad>, <bos>, <eos>,
+        are added to the character vocabulary.
     v2u : bool (default: False)
         Whether to squash the 'v' and 'u' characters
         to the same index. Useful for some historic
@@ -138,11 +139,8 @@ def vectorize_lemmas(lemmas, char_vector_dict,
     focus_repr = str ('recurrent', 'convolutional')
         Which representation model will be used. in
         the case of recurrent representation, the
-        following special symbols are added to the
-        character vocabulary:
-            - '$': padding symbol
-            - '|': end of sequence
-            - '%': beginning of sequence.
+        following <pad>, <eos> and <bos> symbols are
+        added to the character vocabulary.
 
     Returns
     ===========
@@ -185,11 +183,8 @@ def vectorize_token(seq, char_lookup,
     focus_repr = str ('recurrent', 'convolutional')
         Which representation model will be used. in
         the case of recurrent representation, the
-        following special symbols are added to the
-        character vocabulary:
-            - '$': padding symbol
-            - '|': end of sequence
-            - '%': beginning of sequence.
+        following <pad>, <eos> and <bos> symbols are
+        added to the character vocabulary.
 
     Returns
     ===========
@@ -206,17 +201,17 @@ def vectorize_token(seq, char_lookup,
     """
 
     seq = seq[:(max_len - 2)]
-    seq = '%' + seq + '$'
+    seq = [BOS] + list(seq) + [EOS]
 
     ints = []
     for char in seq:
         try:
             ints.append(char_lookup[char])
         except KeyError:
-            ints.append(char_lookup['<unk>'])
+            ints.append(char_lookup[UNK])
 
     while len(ints) < max_len:
-        ints.append(char_lookup['|'])
+        ints.append(char_lookup[PAD])
 
     return ints
 
@@ -248,17 +243,17 @@ def vectorize_lemma(seq, char_vector_dict, max_len, categorical=False):
     """
     # cut, if needed:
     seq = seq[:(max_len - 2)]
-    seq = '%'+seq+'$'
+    seq = [BOS] + list(seq) + [EOS]
 
     # pad, if needed:
     while len(seq) < max_len:
-        seq += '|'
+        seq += [PAD]
 
     seq_X = []
 
     filler = np.zeros(len(char_vector_dict), dtype='float32')
     for char in seq:
-        char_idx = char_vector_dict.get(char, char_vector_dict['<unk>'])
+        char_idx = char_vector_dict.get(char, char_vector_dict[UNK])
         if categorical:
             f = filler.copy()
             f[char_idx] = 1
@@ -573,10 +568,10 @@ class Preprocessor(object):
                     top_idx = np.argmax(positions)
                     # look up corresponding char
                     c = self.lemma_char_vocab[top_idx]
-                    if c in ('$', '%'):
+                    if c in (BOS, EOS):
                         continue
                     # truncate once padding is generated
-                    if c == '|':
+                    if c == UNK:
                         break
                     else:
                         pred_lem += c  # add character

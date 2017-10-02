@@ -16,6 +16,7 @@ from pandora.impl.base_model import BaseModel
 from pandora.impl.pytorch.encoder import RNNEncoder, ConvEncoder
 from pandora.impl.pytorch.decoder import AttentionalDecoder, LinearDecoder
 from pandora.impl.pytorch.utils import Optimizer, BatchIterator, Progbar
+from pandora.utils import PAD
 
 
 class PyTorchModel(nn.Module, BaseModel):
@@ -103,7 +104,7 @@ class PyTorchModel(nn.Module, BaseModel):
         if self.include_lemma == 'generate':
             # weight down loss on padding
             lemma_weight = torch.ones(len(self.lemma_char_vector_dict))
-            lemma_weight[self.lemma_char_vector_dict['|']] = 0
+            lemma_weight[self.lemma_char_vector_dict[PAD]] = 0
             self.lemma_loss = nn.NLLLoss(weight=lemma_weight)
         else:
             self.lemma_loss = nn.NLLLoss()

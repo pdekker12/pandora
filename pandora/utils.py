@@ -10,6 +10,8 @@ import configparser as ConfigParser
 
 import numpy as np
 
+PAD, EOS, BOS, UNK = '<PAD>', '<EOS>', '<BOS>', '<UNK>'
+
 
 def load_annotated_dir(directory='directory', format='tab',
                        extension='.txt', nb_instances=None,
@@ -77,7 +79,7 @@ def load_annotated_dir(directory='directory', format='tab',
                                         include_lemma=include_lemma,
                                         include_morph=include_morph,
                                         include_pos=include_pos)
-            
+
             instances['token'].extend(insts['token'])
             if include_lemma:
                 instances['lemma'].extend(insts['lemma'])
