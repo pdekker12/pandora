@@ -72,3 +72,5 @@ python tagger.py path/to/model/dir --string --input "Cur in theatrum, Cato sever
 python tagger.py path/to/model/dir --input /path/to/dir/to/annotate/ --output /path/to/output/dir/
 python tagger.py path/to/model/dir --tokenized_input --input /path/to/dir/to/annotate/ --output /path/to/output/dir/
 ```
+
+Note that we do not officially support the Theano backend for keras (anymore), because the Theano development will halt after the 1.0 release ([https://groups.google.com/forum/#!topic/theano-users/7Poq8BZutbY](announcement)).
