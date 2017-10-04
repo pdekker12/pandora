@@ -335,9 +335,9 @@ class PyTorchModel(nn.Module, BaseModel):
         self.move_to_gpu(gpu=self.gpu)  # eventually move to gpu
         self.eval()
         out = {}
-        batches = BatchIterator.from_numpy(
-            batch_size or self.batch_size, input_data, dev=True, gpu=self.gpu)
-
+        batches = BatchIterator.from_numpy(1000, input_data, dev=True, gpu=self.gpu)
+        import time
+        time1 = time.time()
         for batch in range(len(batches)):
             src, trg = batches[batch]
             pred = self._wrapped_forward(src, trg)
@@ -365,6 +365,9 @@ class PyTorchModel(nn.Module, BaseModel):
                 else:
                     array = np.concatenate([out[output_label], array])
                     out[output_label] = array
+            time2 = time.time()
+            print("Time since for batch {}/{} of size {}: {}".format(batch, len(batches), batches.batch_size, time2-time1))
+            time1 = time2
 
         return out
 
