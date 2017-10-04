@@ -4,6 +4,10 @@ pandora
 A (language-independent) Tagger-Lemmatizer for Latin & the Vernacular
 
 
+The tagging technology behind Pandora is described in the following papers:
+- Kestemont, M., De Pauw, G., Van Nie, R. & Daelemans, W., ‘Lemmatisation for Variation-Rich Languages Using Deep Learning’. Forthcoming in: *DSH – Digital Scholarship in the Humanities*. [https://academic.oup.com/dsh/article/doi/10.1093/llc/fqw034/2669790/Lemmatization-for-variation-rich-languages-using](paper)
+- Kestemont, M. & J. de Gussem, ‘Integrated Sequence Tagging for Medieval Latin Using Deep Representation Learning’, Journal of Data Mining & Digital Humanities (2017), pp. 17. Special Issue on Computer-Aided Processing of Intertextuality in Ancient Languages, ed. M. Buechler and L. Mellerin [https://jdmdh.episciences.org/3835/pdf](pdf).
+
 ### Install
 
 For now, installation needs to be done by pulling the repository and installing the required libraries yourself.
