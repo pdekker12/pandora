@@ -66,7 +66,9 @@ class Tagger():
         if MODELS[model] is None:
             raise ValueError("Couldn't load implementation {}".format(model))
 
-        if load:
+        if config_path is not None:
+            param_dict = utils.get_param_dict(config_path)
+        elif load is True:
             if model_dir:
                 config_path = os.sep.join((model_dir, 'config.txt'))
                 param_dict = utils.get_param_dict(config_path)
@@ -109,13 +111,19 @@ class Tagger():
         self.min_token_freq_emb = \
             int(param_dict.get('min_token_freq_emb', min_token_freq_emb))
         self.halve_lr_at = int(param_dict.get('halve_lr_at', halve_lr_at))
-        self.max_token_len = \
-            int(param_dict.get('max_token_len', max_token_len))
-        self.max_lemma_len = \
-            int(param_dict.get('max_lemma_len', max_lemma_len))
+
+        self.max_token_len = param_dict.get('max_token_len', max_token_len)
+        if self.max_token_len is not None:
+            self.max_token_len = int(self.max_token_len)
+
+        self.max_lemma_len = param_dict.get('max_lemma_len', max_lemma_len)
+        if self.max_lemma_len is not None:
+            self.max_lemma_len = int(self.max_lemma_len)
+
         self.min_lem_cnt = int(param_dict.get('min_lem_cnt', min_lem_cnt))
         self.char_embed_dim = \
             int(param_dict.get('char_embed_dim', char_embed_dim))
+        self.curr_nb_epochs = int(param_dict.get('curr_nb_epochs', 0))
         self.model = param_dict.get('model', model)
 
         if overwrite is not None:
@@ -437,6 +445,10 @@ class Tagger():
             with open(lemmas_path, 'w') as f:
                 f.write('\n'.join(sorted(self.known_lemmas)))
 
+        self.save_params()
+
+    def save_params(self):
+        """ Write the params to self.model_dir """
         with open(os.sep.join((self.model_dir, 'config.txt')), 'w') as F:
             F.write('# Parameter file\n\n[global]\n')
             F.write('nb_encoding_layers = '+str(self.nb_encoding_layers)+'\n')
@@ -465,6 +477,8 @@ class Tagger():
             F.write('min_token_freq_emb = '+str(self.min_token_freq_emb)+'\n')
             F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
             F.write('char_embed_dim = '+str(self.char_embed_dim)+'\n')
+            if hasattr(self, "curr_nb_epochs"):
+                F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
 
     def epoch(self, autosave=True, eval_test=False):
         if not self.setup:

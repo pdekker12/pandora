@@ -316,6 +316,8 @@ def get_param_dict(p):
                     value = True
                 elif value == 'False':
                     value = False
+                elif value == 'None':
+                    value = None
                 param_dict[name] = value
         return param_dict
 
