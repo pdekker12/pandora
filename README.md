@@ -49,22 +49,22 @@ pip install -r requirements.txt
 
 #### main.py
 
-`main.py` allows you to train your own models :
+`train.py` allows you to train your own models :
 
 ```bash
-python main.py --help
-python main.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources
-python main.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources --nb_epochs 1
-python main.py path/to/model/config.txt --load --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources
+python train.py --help
+python train.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources
+python train.py config.txt --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources --nb_epochs 1
+python train.py path/to/model/config.txt --load --dev /path/to/dev/resources --train /path/to/train/resources --test /path/to/test/resources
 ```
 
 #### unseen.py
 
-`unseen.py` allows you to annotate a string or folder
+`tagger.py` allows you to annotate a string or folder
 
 ```bash
-python unseen.py --help
-python unseen.py path/to/model/dir --string --input "Cur in theatrum, Cato severe, venisti?"
-python unseen.py path/to/model/dir --input /path/to/dir/to/annotate/ --output /path/to/output/dir/
-python unseen.py path/to/model/dir --tokenized_input --input /path/to/dir/to/annotate/ --output /path/to/output/dir/ 
+python tagger.py --help
+python tagger.py path/to/model/dir --string --input "Cur in theatrum, Cato severe, venisti?"
+python tagger.py path/to/model/dir --input /path/to/dir/to/annotate/ --output /path/to/output/dir/
+python tagger.py path/to/model/dir --tokenized_input --input /path/to/dir/to/annotate/ --output /path/to/output/dir/
 ```
