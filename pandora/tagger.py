@@ -354,11 +354,10 @@ class Tagger():
                     lemmas=self.test_lemmas,
                     known=self.preprocessor.known_tokens)
 
-    def test(self, multilabel_threshold=0.5, verbose=False):
+    def test(self, multilabel_threshold=0.5):
         """ Run tests evaluation with prediction
 
         :param multilabel_threshold:
-        :param verbose: Print all results
         :return: Score Dictionary
         """
         if not self.include_test:
@@ -380,9 +379,6 @@ class Tagger():
             test_preds = [test_preds]
 
         if self.include_lemma:
-            if verbose:
-                print('::: Test scores (lemmas) :::')
-
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                 predictions=test_preds['lemma_out'])
             if self.postcorrect:
@@ -396,11 +392,10 @@ class Tagger():
                 gold=self.test_lemmas,
                 silver=pred_lemmas,
                 test_tokens=self.test_tokens,
-                known_tokens=self.preprocessor.known_tokens)
+                known_tokens=self.preprocessor.known_tokens,
+                print_scores=False)
 
         if self.include_pos:
-            if verbose:
-                print('::: Test scores (pos) :::')
 
             pred_pos = self.preprocessor.inverse_transform_pos(
                 predictions=test_preds['pos_out'])
@@ -408,12 +403,10 @@ class Tagger():
                 gold=self.test_pos,
                 silver=pred_pos,
                 test_tokens=self.test_tokens,
-                known_tokens=self.preprocessor.known_tokens)
+                known_tokens=self.preprocessor.known_tokens,
+                print_scores=False)
 
         if self.include_morph:
-            if verbose:
-                print('::: Test scores (morph) :::')
-
             pred_morph = self.preprocessor.inverse_transform_morph(
                 predictions=test_preds['morph_out'],
                 threshold=multilabel_threshold)
@@ -422,13 +415,15 @@ class Tagger():
                     gold=self.test_morph,
                     silver=pred_morph,
                     test_tokens=self.test_tokens,
-                    known_tokens=self.preprocessor.known_tokens)
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=False)
             elif self.include_morph == 'multilabel':
                 score_dict['test_morph'] = evaluation.multilabel_accuracies(
                     gold=self.test_morph,
                     silver=pred_morph,
                     test_tokens=self.test_tokens,
-                    known_tokens=self.preprocessor.known_tokens)
+                    known_tokens=self.preprocessor.known_tokens,
+                    print_scores=False)
 
         return score_dict
 
@@ -550,20 +545,16 @@ class Tagger():
 
         return self.get_score_dict(train_preds, dev_preds)
 
-    def get_score_dict(self, train_preds, dev_preds=None, verbose=False):
+    def get_score_dict(self, train_preds, dev_preds=None):
         """ Get score dict given train and dev preds
 
         :param train_preds: Training predictions
         :param dev_preds: Development predictions
-        :param verbose: Verbosity (print scores)
         :return: Score dictionary
         """
 
         score_dict = {}
         if self.include_lemma:
-            if verbose:
-                print('::: Train scores (lemmas) :::')
-
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                 predictions=train_preds['lemma_out'])
             score_dict['train_lemma'] = evaluation.single_label_accuracies(
@@ -571,12 +562,9 @@ class Tagger():
                 silver=pred_lemmas,
                 test_tokens=self.train_tokens,
                 known_tokens=self.preprocessor.known_tokens,
-                print_scores=verbose)
+                print_scores=False)
 
             if self.include_dev:
-                if verbose:
-                    print('::: Dev scores (lemmas) :::')
-
                 pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                     predictions=dev_preds['lemma_out'])
                 score_dict['dev_lemma'] = evaluation.single_label_accuracies(
@@ -584,12 +572,9 @@ class Tagger():
                     silver=pred_lemmas,
                     test_tokens=self.dev_tokens,
                     known_tokens=self.preprocessor.known_tokens,
-                    print_scores=verbose)
+                    print_scores=False)
 
                 if self.postcorrect:
-                    if verbose is True:
-                        print('::: Dev scores (lemmas) -> postcorrected :::')
-
                     for i in range(len(pred_lemmas)):
                         if pred_lemmas[i] not in self.known_lemmas:
                             pred_lemmas[i] = min(
@@ -600,12 +585,9 @@ class Tagger():
                         gold=self.dev_lemmas,
                         silver=pred_lemmas,
                         test_tokens=self.dev_tokens,
-                        known_tokens=self.preprocessor.known_tokens,
-                        print_scores=verbose)
+                        known_tokens=self.preprocessor.known_tokens)
 
         if self.include_pos:
-            if verbose:
-                print('::: Train scores (pos) :::')
 
             pred_pos = self.preprocessor.inverse_transform_pos(
                 predictions=train_preds['pos_out'])
@@ -614,12 +596,9 @@ class Tagger():
                 silver=pred_pos,
                 test_tokens=self.train_tokens,
                 known_tokens=self.preprocessor.known_tokens,
-                print_scores=verbose)
+                print_scores=False)
 
             if self.include_dev:
-                if verbose:
-                    print('::: Dev scores (pos) :::')
-
                 pred_pos = self.preprocessor.inverse_transform_pos(
                     predictions=dev_preds['pos_out'])
                 score_dict['dev_pos'] = evaluation.single_label_accuracies(
@@ -627,11 +606,9 @@ class Tagger():
                     silver=pred_pos,
                     test_tokens=self.dev_tokens,
                     known_tokens=self.preprocessor.known_tokens,
-                    print_scores=verbose)
+                    print_scores=False)
 
         if self.include_morph:
-            if verbose:
-                print('::: Train scores (morph) :::')
 
             pred_morph = self.preprocessor.inverse_transform_morph(
                 predictions=train_preds['morph_out'])
@@ -642,7 +619,7 @@ class Tagger():
                     silver=pred_morph,
                     test_tokens=self.train_tokens,
                     known_tokens=self.preprocessor.known_tokens,
-                    print_scores=verbose)
+                    print_scores=False)
 
             elif self.include_morph == 'multilabel':
                 score_dict['train_morph'] = evaluation.multilabel_accuracies(
@@ -650,11 +627,9 @@ class Tagger():
                     silver=pred_morph,
                     test_tokens=self.train_tokens,
                     known_tokens=self.preprocessor.known_tokens,
-                    print_scores=verbose)
+                    print_scores=False)
 
             if self.include_dev:
-                if verbose:
-                    print('::: Dev scores (morph) :::')
 
                 pred_morph = self.preprocessor.inverse_transform_morph(
                     predictions=dev_preds['morph_out'])
@@ -665,7 +640,7 @@ class Tagger():
                         silver=pred_morph,
                         test_tokens=self.dev_tokens,
                         known_tokens=self.preprocessor.known_tokens,
-                        print_scores=verbose)
+                        print_scores=False)
 
                 elif self.include_morph == 'multilabel':
                     score_dict['dev_morph'] = evaluation.multilabel_accuracies(
@@ -673,7 +648,7 @@ class Tagger():
                         silver=pred_morph,
                         test_tokens=self.dev_tokens,
                         known_tokens=self.preprocessor.known_tokens,
-                        print_scores=verbose)
+                        print_scores=False)
 
         return score_dict
 
