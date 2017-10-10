@@ -74,3 +74,16 @@ python tagger.py path/to/model/dir --tokenized_input --input /path/to/dir/to/ann
 ```
 
 Note that we do not officially support the Theano backend for keras (anymore), because the Theano development will halt after the 1.0 release ([https://groups.google.com/forum/#!topic/theano-users/7Poq8BZutbY](announcement)).
+
+### Examples
+
+The repository includes sample configurations (see `config_example` folder), and
+ is shipped with a small test data-set of Old French epic texts from the Geste 
+ corpus (https://github.com/Jean-Baptiste-Camps/Geste).
+ 
+To launch training on this corpus, do
+```bash
+python3 train.py config_geste.txt --train data/geste/train --dev data/geste/dev --test data/geste/test
+```
+  
+

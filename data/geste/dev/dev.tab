@@ -1,0 +1,366 @@
+
+il	il	PROper	PERS._3|NOMB._s|GENRE_m|CAS_n
+meïmes	mëisme	ADJind	NOMB._s|GENRE_m|CAS_n
+vet	aler	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+la	le	DETdef	NOMB._s|GENRE_f|CAS_r
+messe	messe	NOMcom	NOMB._s|GENRE_f|CAS_r
+chanter	chanter	VERinf	_
+
+grant	grant	ADJqua	NOMB._s|GENRE_f|CAS_n|DEGRE_p
+fu	estre1	VERcjg	MODE_ind|TEMPS_psp|PERS._3|NOMB._s
+la	le	DETdef	NOMB._s|GENRE_f|CAS_n
+offerende	ofrende	NOMcom	NOMB._s|GENRE_f|CAS_n
+pur	por2	PRE	_
+le	le	DETdef	NOMB._s|GENRE_m|CAS_r
+liu	lieu	NOMcom	NOMB._s|GENRE_m|CAS_r
+enorer	onorer	VERinf	_
+
+ne	ne1	ADVneg	_
+li	il	PROper	PERS._3|NOMB._s|GENRE_m|CAS_i
+estut	estovoir1	VERcjg	MODE_ind|TEMPS_psp|PERS._3|NOMB._s
+pur	por2	PRE	_
+vii	set	DETcar	NOMB._p|GENRE_m|CAS_r
+c	cent	DETcar	NOMB._p|GENRE_m|CAS_r
+mars	marc1	NOMcom	NOMB._p|GENRE_m|CAS_r
+doner	doner	VERinf	_
+
+Le	le	DETdef	NOMB._s|GENRE_m|CAS_n
+duc	duc2	NOMcom	NOMB._s|GENRE_m|CAS_n
+Girars	girard	NOMpro	NOMB._s|GENRE_m|CAS_n
+fist	faire	VERcjg	MODE_ind|TEMPS_psp|PERS._3|NOMB._s
+suen	suen	DETpos	PERS._3|NOMB._s|GENRE_m|CAS_r
+eire	erre3	NOMcom	NOMB._s|GENRE_m|CAS_r
+aprester	aprester	VERinf	_
+
+Que	que1	CONsub	_
+mulz	mul3	NOMcom	NOMB._p|GENRE_m|CAS_r
+que	que1	CONsub	_
+mules	mule5	NOMcom	NOMB._p|GENRE_f|CAS_r
+xxx	trente	PROcar	NOMB._p|GENRE_m|CAS_r
+vii	set	PROcar	NOMB._p|GENRE_m|CAS_r
+assembler	assembler	VERinf	_
+
+Les	le	DETdef	NOMB._p|GENRE_f|CAS_r
+noveles	novel	ADJqua	NOMB._p|GENRE_f|CAS_r|DEGRE_p
+
+e	et	CONcoo	_
+al	a3+le	PRE.DETdef	NOMB._s|GENRE_m|CAS_r
+menur	menor	NOMcom	NOMB._s|GENRE_m|CAS_r
+
+tel	tel	PROind	NOMB._s|GENRE_m|CAS_n
+i	i2	PROadv	_
+unt	venir	VERcjg	MODE_ind|TEMPS_psp|PERS._3|NOMB._s
+sa	son4	OUT	_
+fiz	fil2	NOMcom	NOMB._s|GENRE_m|CAS_r
+a	a3	PRE	_
+povere	povre	ADJqua	NOMB._s|GENRE_m|CAS_r|DEGRE_p
+vavasur	vavassor	NOMcom	NOMB._s|GENRE_m|CAS_r
+
+ki	qui	PROrel	NOMB._s|GENRE_m|CAS_n
+al	a3+le	PRE.DETdef	NOMB._s|GENRE_m|CAS_r
+partir	partir	NOMcom	NOMB._s|GENRE_m|CAS_r
+serat	estre1	VERcjg	MODE_ind|TEMPS_fut|PERS._3|NOMB._s
+duc	duc2	NOMcom	NOMB._s|GENRE_m|CAS_n
+u	o3	CONcoo	_
+conteur	contor1	NOMcom	NOMB._s|GENRE_m|CAS_n
+
+a	a3	OUT	_
+uns	un	DETndf	NOMB._s|GENRE_m|CAS_n
+arcevesques	arcevesque	NOMcom	NOMB._s|GENRE_m|CAS_n
+commence	comencier	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+a	a3	PRE	_
+paller	parler	VERinf	_
+
+gentiz	gentil	ADJqua	NOMB._s|GENRE_m|CAS_n|DEGRE_p
+hum	ome	NOMcom	NOMB._s|GENRE_m|CAS_n
+fud	estre1	VERcjg	MODE_ind|TEMPS_psp|PERS._3|NOMB._s
+e	et	CONcoo	_
+joifne	juene	ADJqua	NOMB._s|GENRE_m|CAS_n|DEGRE_p
+bacheler	bacheler	NOMcom	NOMB._s|GENRE_m|CAS_n
+
+a	a3	PRE	_
+grant	grant	ADJqua	NOMB._s|GENRE_f|CAS_r|DEGRE_p
+merveille	merveille	NOMcom	NOMB._s|GENRE_f|CAS_r
+se	soi1	PROper	PERS._3|NOMB._s|GENRE_m|CAS_r
+fet	faire	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+a	a3	PRE	_
+tuz	tot	PROind	NOMB._p|GENRE_m|CAS_r
+amer	amer1	VERinf	_
+
+n	ne1	ADVneg	_
+a	avoir	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+duc	duc2	NOMcom	NOMB._s|GENRE_m|CAS_r
+en	en1	PRE	_
+france	france	NOMpro	NOMB._s|GENRE_f|CAS_r
+tant	tant	ADVgen	DEGRE_-
+se	soi1	PROper	PERS._3|NOMB._s|GENRE_m|CAS_r
+sace	savoir	VERcjg	MODE_sub|TEMPS_pst|PERS._3|NOMB._s
+pener	pener	VERinf	_
+
+ki	qui	PROrel	NOMB._s|GENRE_m|CAS_n
+si	si	ADVgen	DEGRE_-
+grant	grant	ADJqua	NOMB._s|GENRE_m|CAS_r|DEGRE_p
+cust	cost2	NOMcom	NOMB._s|GENRE_m|CAS_r
+voille	voloir	VERcjg	MODE_sub|TEMPS_pst|PERS._3|NOMB._s
+a	a3	PRE	_
+tuz	tot	PROind	NOMB._p|GENRE_m|CAS_r
+mener	mener	VERinf	_
+
+mieuz	mieus	ADVgen	DEGRE_c
+eme	amer1	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+il	il	PROper	PERS._3|NOMB._s|GENRE_m|CAS_n
+chevals	cheval	NOMcom	NOMB._p|GENRE_m|CAS_r
+achater	achater	VERinf	_
+
+e	et	CONcoo	_
+beles	bel1	ADJqua	NOMB._p|GENRE_f|CAS_r|DEGRE_p
+armes	arme	NOMcom	NOMB._p|GENRE_f|CAS_r
+as	a3+le	PRE.DETdef	NOMB._p|GENRE_m|CAS_r
+vallez	vaslet	NOMcom	NOMB._p|GENRE_m|CAS_r
+adubber	adober	VERinf	_
+
+qu	que1	CONsub	_
+il	il	PROper	PERS._3|NOMB._s|GENRE_m|CAS_n
+ne	ne1	ADVneg	_
+fait	faire	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+tresor	tresor	NOMcom	NOMB._s|GENRE_m|CAS_r
+a	a3	PRE	_
+amasser	amasser	VERinf	_
+
+ne	ne2	CONcoo	_
+heritage	iretage	NOMcom	NOMB._s|GENRE_m|CAS_r
+ne	ne2	CONcoo	_
+feu	fief	NOMcom	NOMB._s|GENRE_m|CAS_r
+ne	ne1	ADVneg	_
+volt	voloir	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+clamer	clamer	VERinf	_
+
+e	et	CONcoo	_
+qui	qui	PROrel	NOMB._s|GENRE_m|CAS_n
+voldrat	voloir	VERcjg	MODE_ind|TEMPS_fut|PERS._3|NOMB._s
+le	le	DETdef	NOMB._s|GENRE_m|CAS_r
+rei	roi2	NOMcom	NOMB._s|GENRE_m|CAS_r
+desheriter	desireter	VERinf	_
+
+il	il	PROper	PERS._3|NOMB._s|GENRE_m|CAS_n
+deit	devoir	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+en	en1	PRE	_
+l	le	DETdef	NOMB._s|GENRE_f|CAS_r
+ost	ost	NOMcom	NOMB._s|GENRE_f|CAS_r
+ensemle	ensemble	ADVgen	DEGRE_-
+od	o4	PRE	_
+lui	il	PROper	PERS._3|NOMB._s|GENRE_m|CAS_i
+aler	aller	VERinf	_
+
+porter	porter	VERinf	_
+ses	son4	DETpos	PERS._3|NOMB._p|GENRE_f|CAS_r
+armes	arme	NOMcom	NOMB._p|GENRE_f|CAS_r
+e	et	CONcoo	_
+sun	son4	DETpos	PERS._3|NOMB._s|GENRE_m|CAS_r
+cheval	cheval	NOMcom	NOMB._s|GENRE_m|CAS_r
+mener	mener	VERinf	_
+
+cumbatre	combatre	VERinf	_
+sei	soi1	PROper	PERS._3|NOMB._s|GENRE_m|CAS_r
+sanz	sans	PRE	_
+nul	nul	DETind	NOMB._s|GENRE_m|CAS_r
+desordener	desordener	NOMcom	NOMB._s|GENRE_m|CAS_r
+
+a	a3	PRE	_
+l	le	DETdef	NOMB._s|GENRE_m|CAS_r
+apostoille	apostoile	NOMcom	NOMB._s|GENRE_m|CAS_r
+le	il	PROper	PERS._3|NOMB._s|GENRE_m|CAS_r
+commence	comencier	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+a	a3	PRE	_
+mustrer	mostrer	VERinf	_
+
+sire	seignor	NOMcom	NOMB._s|GENRE_m|CAS_n
+apostoille	apostoile	NOMcom	NOMB._s|GENRE_m|CAS_n
+ne	ne1	ADVneg	_
+vos	vos1	PROper	PERS._2|NOMB._p|GENRE_m|CAS_i
+en	en2	PROadv	_
+deit	devoir	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+peser	peser	VERinf	_
+
+nus	nos1	PROper	PERS._1|NOMB._p|GENRE_m|CAS_n
+devun	devoir	VERcjg	MODE_ind|TEMPS_pst|PERS._1|NOMB._p
+mut	mout	ADVgen	DEGRE_-
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+chevalirs	chevalier	NOMcom	NOMB._p|GENRE_m|CAS_r
+amer	amer1	VERinf	_
+
+quant	cant1	CONsub	_
+nus	nos1	PROper	PERS._1|NOMB._p|GENRE_m|CAS_n
+sumes	estre1	VERcjg	MODE_ind|TEMPS_pst|PERS._1|NOMB._p
+a	a3	PRE	_
+nostre	nostre	DETpos	PERS._1|NOMB._s|GENRE_m|CAS_r
+disner	disner	NOMcom	NOMB._s|GENRE_m|CAS_r
+
+e	et	CONcoo	_
+nus	nos1	PROper	PERS._1|NOMB._p|GENRE_m|CAS_n
+serruns	estre1	VERcjg	MODE_ind|TEMPS_fut|PERS._1|NOMB._p
+a	a3	PRE	_
+matines	matines	NOMcom	NOMB._p|GENRE_f|CAS_r
+chanter	chanter	VERinf	_
+
+il	il	PROper	PERS._3|NOMB._p|GENRE_m|CAS_n
+se	soi1	PROper	PERS._3|NOMB._p|GENRE_m|CAS_r
+cumbatent	combatre	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._p
+pur	por2	PRE	_
+les	le	DETdef	NOMB._p|GENRE_f|CAS_r
+almes	ame	NOMcom	NOMB._p|GENRE_f|CAS_r
+sauver	sauver	VERinf	_
+
+e	et	CONcoo	_
+nos	nos1	PROper	PERS._1|NOMB._p|GENRE_m|CAS_n
+e	et	CONcoo	_
+cest	cest	DETdem	NOMB._s|GENRE_m|CAS_n
+vostre	vostre	ADJpos	PERS._1|NOMB._s|GENRE_m|CAS_n
+abbes	abé1	NOMcom	NOMB._s|GENRE_m|CAS_n
+fromer	fromer	NOMpro	NOMB._s|GENRE_m|CAS_n
+
+devuns	devoir	VERcjg	MODE_ind|TEMPS_pst|PERS._1|NOMB._p
+pur	por2	PRE	_
+eus	il	PROper	PERS._3|NOMB._p|GENRE_m|CAS_i
+noz	nostre	DETpos	PERS._1|NOMB._p|GENRE_m|CAS_r
+tresor	tresor	NOMcom	NOMB._p|GENRE_m|CAS_r
+enfundre	esfondrer	VERinf	_
+
+tant	tant	ADVgen	DEGRE_-
+lor	il	PROper	PERS._3|NOMB._p|GENRE_m|CAS_r
+en	en2	PROadv	_
+deit	devoir	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+chascun	chascun	PROind	NOMB._s|GENRE_m|CAS_n
+de	de	PRE	_
+nos	nos1	PROper	PERS._1|NOMB._p|GENRE_m|CAS_i
+doner	doner	VERinf	_
+
+que	que4	CONsub	_
+il	il	PROper	PERS._3|NOMB._p|GENRE_m|CAS_n
+nos	nos1	PROper	PERS._1|NOMB._p|GENRE_m|CAS_r
+viegent	venir	VERcjg	MODE_sub|TEMPS_pst|PERS._3|NOMB._p
+servir	servir	VERinf	_
+e	et	CONcoo	_
+honorer	onorer	VERinf	_
+
+e	et	CONcoo	_
+ainz	ainz	ADVgen	DEGRE_-
+que	que4	CONsub	_
+li	le	DETdef	NOMB._s|GENRE_m|CAS_n
+reis	roi2	NOMcom	NOMB._s|GENRE_m|CAS_n
+se	soi1	PROper	PERS._3|NOMB._s|GENRE_m|CAS_r
+life	lever	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+de	de	PRE	_
+suz	soz	PRE	_
+le	le	DETdef	NOMB._s|GENRE_m|CAS_r
+pin	pin	NOMcom	NOMB._s|GENRE_m|CAS_r
+
+ne	ne2	CONcoo	_
+qu	que4	CONsub	_
+il	il	PROper	PERS._3|NOMB._s|GENRE_m|CAS_n
+se	soi1	PROper	PERS._3|NOMB._s|GENRE_m|CAS_r
+dresse	drecier	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+del	de+le	PRE.DETdef	NOMB._s|GENRE_m|CAS_r
+perun	perron	NOMcom	NOMB._s|GENRE_m|CAS_r
+acerin	acerin	ADJqua	NOMB._s|GENRE_m|CAS_r|DEGRE_p
+
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+dras	drap	NOMcom	NOMB._p|GENRE_m|CAS_r
+de	de	PRE	_
+sei	soie2	NOMcom	NOMB._s|GENRE_f|CAS_r
+de	de	PRE	_
+paille	paile	NOMcom	NOMB._s|GENRE_m|CAS_r
+alisandrin	alexandrin	ADJqua	NOMB._s|GENRE_m|CAS_r|DEGRE_p
+
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+granz	grant	ADJqua	NOMB._p|GENRE_m|CAS_r|DEGRE_p
+ostrus	ostor	NOMcom	NOMB._p|GENRE_m|CAS_r
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+falcus	faucon	NOMcom	NOMB._p|GENRE_m|CAS_r
+petevin	poitevin	ADJqua	NOMB._p|GENRE_m|CAS_r|DEGRE_p
+
+Les	le	DETdef	NOMB._p|GENRE_f|CAS_r
+riches	riche	ADJqua	NOMB._p|GENRE_f|CAS_r|DEGRE_p
+pieres	piere	NOMcom	NOMB._p|GENRE_f|CAS_r
+e	et	CONcoo	_
+les	le	DETdef	NOMB._p|GENRE_f|CAS_r
+copes	cope1	NOMcom	NOMB._p|GENRE_f|CAS_r
+d	de	PRE	_
+or	or1	NOMcom	NOMB._s|GENRE_m|CAS_r
+fin	fin2	ADJqua	NOMB._s|GENRE_m|CAS_r|DEGRE_p
+
+iceles	icel	PROdem	NOMB._p|GENRE_f|CAS_r
+dune	doner	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+Karles	charles	NOMpro	NOMB._s|GENRE_m|CAS_n
+li	le	DETdef	NOMB._s|GENRE_m|CAS_n
+fiz	fil2	NOMcom	NOMB._s|GENRE_m|CAS_n
+pepin	pepin	NOMpro	NOMB._s|GENRE_m|CAS_r
+
+as	a3+le	PRE.DETdef	NOMB._p|GENRE_m|CAS_r
+gentiz	gentil	ADJqua	NOMB._p|GENRE_m|CAS_r|DEGRE_p
+hummes	ome	NOMcom	NOMB._p|GENRE_m|CAS_r
+ke	qui	PROrel	NOMB._p|GENRE_m|CAS_n
+sunt	estre1	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._p
+de	de	PRE	_
+riche	riche	ADJqua	NOMB._s|GENRE_m|CAS_r|DEGRE_p
+lin	ling2	NOMcom	NOMB._s|GENRE_m|CAS_r
+
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+palefrais	palefroi	NOMcom	NOMB._p|GENRE_m|CAS_r
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+dras	drap	NOMcom	NOMB._p|GENRE_m|CAS_r
+e	et	CONcoo	_
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+deniers	denier	NOMcom	NOMB._p|GENRE_m|CAS_r
+
+ces	ce2	PROdem	NOMB._p|GENRE_m|CAS_r|DEGRE_-
+done	doner	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+Karles	charles	NOMpro	NOMB._s|GENRE_m|CAS_n
+as	a3+le	PRE.DETdef	NOMB._p|GENRE_m|CAS_r
+povres	povre	ADJqua	NOMB._p|GENRE_m|CAS_r|DEGRE_p
+chevaliers	chevalier	NOMcom	NOMB._p|GENRE_m|CAS_r
+
+le	le	DETdef	NOMB._s|GENRE_m|CAS_r
+ver	vair2	NOMcom	NOMB._s|GENRE_m|CAS_r
+le	le	DETdef	NOMB._s|GENRE_m|CAS_r
+gris	gris	NOMcom	NOMB._s|GENRE_m|CAS_r
+e	et	CONcoo	_
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+ignaus	isnel	ADJqua	NOMB._p|GENRE_m|CAS_r|DEGRE_p
+destrirs	destrier1	NOMcom	NOMB._p|GENRE_m|CAS_r
+
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+falcus	faucon	NOMcom	NOMB._p|GENRE_m|CAS_r
+les	le	DETdef	NOMB._p|GENRE_m|CAS_r
+muez	müer	VERppe	NOMB._p|GENRE_m|CAS_r
+espervirz	esprevier	NOMcom	NOMB._p|GENRE_m|CAS_r
+
+cels	cel	PROdem	NOMB._p|GENRE_m|CAS_r
+done	doner	VERcjg	MODE_ind|TEMPS_pst|PERS._3|NOMB._s
+Karles	charles	NOMpro	NOMB._s|GENRE_m|CAS_n
+as	a3+le	PRE.DETdef	NOMB._p|GENRE_m|CAS_r
+bachellers	bacheler	NOMcom	NOMB._p|GENRE_m|CAS_r
+legers	legier2	ADJqua	NOMB._p|GENRE_m|CAS_r|DEGRE_p
+
+as	a3+le	PRE.DETdef	NOMB._p|GENRE_m|CAS_r
+damisiaus	damoisel	NOMcom	NOMB._p|GENRE_m|CAS_r
+as	a3+le	PRE.DETdef	NOMB._p|GENRE_m|CAS_r
+novais	novel	ADJqua	NOMB._p|GENRE_m|CAS_r|DEGRE_p
+primsautirs	prinsautier	NOMcom	NOMB._p|GENRE_m|CAS_r
+
+duc	donc	ADVgen	DEGRE_-
+fist	faire	VERcjg	MODE_ind|TEMPS_psp|PERS._3|NOMB._s
+li	le	DETdef	NOMB._s|GENRE_m|CAS_n
+reis	roi2	NOMcom	NOMB._s|GENRE_m|CAS_n
+a	a3	PRE	_
+chascun	chascun	PROind	NOMB._s|GENRE_m|CAS_r
+sun	son4	DETpos	PERS._3|NOMB._s|GENRE_m|CAS_r
+voler	voloir	NOMcom	NOMB._s|GENRE_m|CAS_r
+
+treis	trois	DETcar	NOMB._p|GENRE_m|CAS_r
+cent	cent	DETcar	NOMB._p|GENRE_m|CAS_r
+chevas	cheval	NOMcom	NOMB._p|GENRE_m|CAS_r
+i	i2	PROadv	_
+donat	doner	VERcjg	MODE_ind|TEMPS_psp|PERS._3|NOMB._s
+einz	ainz	PRE	_
+le	le	DETdef	NOMB._s|GENRE_m|CAS_r
