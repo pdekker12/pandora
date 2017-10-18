@@ -312,7 +312,7 @@ class KerasModel(BaseModel):
              batch_size=50):
         # load model and weights:
         with open(os.path.join(model_dir, 'model_architecture.json'), 'r') as f:
-            model = model_from_json(f)
+            model = model_from_json(f.read())
         model.load_weights(os.sep.join((model_dir, 'model_weights.hdf5')))
 
         loss_dict = {}
