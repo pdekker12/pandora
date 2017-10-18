@@ -513,7 +513,7 @@ class Preprocessor(object):
 
                 if self.categorical:
                     X_morph = utils.to_categorical(
-                        X_morph, nb_classes=len(self.morph_encoder.classes_))
+                        X_morph, num_classes=len(self.morph_encoder.classes_))
 
                 returnables['X_morph'] = X_morph
 
