@@ -53,7 +53,7 @@ class SentenceIterator:
         Simple batch iterator.
         """
         for start_idx, end_idx in self.idxs:
-            yield self.tokens[start_idx:end_idx]
+            yield self.tokens[start_idx: end_idx]
 
 
 class Pretrainer:
