@@ -50,6 +50,10 @@ def train_func(config, train, dev=None, test=None, load=False, verbose=True, fir
         include_morph=params['include_morph'],
         nb_instances=None
     )
+
+    if not len(train_data.keys()) or \
+        not len(train_data[list(train_data.keys())[0]]):
+            raise ValueError('No training data loaded...')
     
     data_sets = dict(
             train_data=train_data,
@@ -65,6 +69,9 @@ def train_func(config, train, dev=None, test=None, load=False, verbose=True, fir
             include_morph=params['include_morph'],
             nb_instances=None
         )
+        if not len(dev_data.keys()) or \
+            not len(dev_data[list(dev_data.keys())[0]]):
+                raise ValueError('No dev data loaded...')
         data_sets["dev_data"] = dev_data
 
     if test is not None:
@@ -77,6 +84,9 @@ def train_func(config, train, dev=None, test=None, load=False, verbose=True, fir
             include_morph=params['include_morph'],
             nb_instances=None
         )
+        if not len(test_data.keys()) or \
+            not len(test_data[list(test_data.keys())[0]]):
+                raise ValueError('No test data loaded...')
         data_sets["test_data"] = test_data
 
     if load:
