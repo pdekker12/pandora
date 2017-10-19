@@ -509,7 +509,7 @@ class Preprocessor(object):
             if self.include_morph == 'label':
                 X_morph = [m if m in self.morph_encoder.classes_ else '<UNK>'
                            for m in morph]
-                morph = self.morph_encoder.transform(X_morph)
+                X_morph = self.morph_encoder.transform(X_morph)
 
                 if self.categorical:
                     X_morph = utils.to_categorical(
