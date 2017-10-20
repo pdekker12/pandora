@@ -6,7 +6,7 @@ from __future__ import print_function
 import os
 from operator import itemgetter
 from collections import Counter
-
+import jsonpickle
 import numpy as np
 
 from sklearn.feature_extraction import DictVectorizer
@@ -321,6 +321,20 @@ class Preprocessor(object):
 
     def __init__(self, categorical=False):
         self.categorical = categorical
+        self.max_lemma_len = None
+        self.max_token_len = None
+        self.focus_repr = None
+        self.token_char_vocab, self.token_char_lookup = None, None
+        self.known_tokens = None
+        self.include_lemma, self.known_lemmas = None, None
+        self.lemma_char_vocab, self.lemma_char_lookup = None, None
+        self.min_lem_cnt, self.lemma_encoder = None, None
+        self.pos_encoder = None
+        self.morph_encoder = None
+        self.nb_morph_cats, self.morph_idxs = None, None
+        self.include_morph = None
+        self.include_pos = None
+        self.lemma_char_dict = None
 
     def fit(self, tokens, lemmas, pos, morph, include_lemma,
             include_morph, focus_repr, max_token_len=None,
@@ -371,7 +385,6 @@ class Preprocessor(object):
         ===========
             Itself.
         """
-
         if max_token_len:
             self.max_token_len = max_token_len
         else:
@@ -407,6 +420,7 @@ class Preprocessor(object):
 
         # fit pos labels:
         if pos:
+            self.include_pos = True
             self.pos_encoder = LabelEncoder()
             self.pos_encoder.fit(pos + ['<UNK>'])
 
@@ -415,24 +429,33 @@ class Preprocessor(object):
             if self.include_morph == 'label':
                 self.morph_encoder = LabelEncoder()
                 self.morph_encoder.fit(morph + ['<UNK>'])
-                self.nb_morph_cats = len(self.morph_encoder.classes_)
             elif self.include_morph == 'multilabel':
                 # fit morph analysis:
                 morph_dicts = parse_morphs(morph)
                 self.morph_encoder = DictVectorizer(sparse=False)
                 self.morph_encoder.fit(morph_dicts)
-                self.nb_morph_cats = len(self.morph_encoder.feature_names_)
-                self.morph_idxs = {}
-                for i, feat_name in enumerate(
-                        self.morph_encoder.feature_names_):
-                    label, _ = feat_name.strip().split('=')
-                    try:
-                        self.morph_idxs[label].add(i)
-                    except KeyError:
-                        self.morph_idxs[label] = set()
-                        self.morph_idxs[label].add(i)
+            self.deduct_secondary_informations_from_morph()
 
         return self
+
+    def deduct_secondary_informations_from_morph(self):
+        """ Deducts internal var values such as morph_idxs from self.morph_encoder
+
+        Used for load and fit
+        """
+        if self.include_morph == 'label':
+            self.nb_morph_cats = len(self.morph_encoder.classes_)
+        elif self.include_morph == 'multilabel':
+            self.nb_morph_cats = len(self.morph_encoder.feature_names_)
+            self.morph_idxs = {}
+            for i, feat_name in enumerate(
+                    self.morph_encoder.feature_names_):
+                label, _ = feat_name.strip().split('=')
+                try:
+                    self.morph_idxs[label].add(i)
+                except KeyError:
+                    self.morph_idxs[label] = set()
+                    self.morph_idxs[label].add(i)
 
     def transform(self, tokens=None, lemmas=None, pos=None, morph=None):
         """ Transforms a list of corresponding tokens,
@@ -633,15 +656,23 @@ class Preprocessor(object):
                     morphs.append('|'.join(m))
                 else:
                     morphs.append('_')
-        return morphs
+            return morphs
 
     def save(self, model_dir):
-        if hasattr(self, 'lemma_encoder'):
+        if self.lemma_encoder:
             self.lemma_encoder.save(
                 p=os.sep.join((model_dir, 'lemma_enc.txt')))
-        if hasattr(self, 'pos_encoder'):
+        if self.pos_encoder:
             self.pos_encoder.save(
                 p=os.sep.join((model_dir, 'pos_enc.txt')))
+        if self.morph_encoder:
+            if self.include_morph == "label":
+                self.morph_encoder.save(
+                    p=os.sep.join((model_dir, 'morph_enc.txt')))
+            else:
+                with open(os.sep.join((model_dir, 'morph_enc.json')), "w") as f:
+                    f.write(jsonpickle.dumps(self.morph_encoder))
+
         if self.token_char_vocab:  # TODO: currently this always evaluates true
             path = os.sep.join((model_dir, 'token_char_lookup.txt'))
             with open(path, 'w') as f:
@@ -654,13 +685,14 @@ class Preprocessor(object):
                     f.write('\t'.join((c, str(idx)))+'\n')
 
     def load(self, model_dir, max_token_len, focus_repr,
-             max_lemma_len, include_lemma, include_pos):
+             max_lemma_len, include_lemma, include_pos, include_morph=False):
 
         self.max_token_len = max_token_len
         self.max_lemma_len = max_lemma_len
         self.focus_repr = focus_repr
         self.include_lemma = include_lemma
         self.include_pos = include_pos
+        self.include_morph = include_morph
 
         self.token_char_lookup = {}
         path = os.sep.join((model_dir, 'token_char_lookup.txt'))
@@ -672,6 +704,15 @@ class Preprocessor(object):
         if self.include_pos:
             self.pos_encoder = LabelEncoder()
             self.pos_encoder.load(p=os.sep.join((model_dir, 'pos_enc.txt')))
+
+        if self.include_morph:
+            if self.include_morph == 'label':
+                self.morph_encoder = LabelEncoder()
+                self.morph_encoder.load(p=os.sep.join((model_dir, 'morph_enc.txt')))
+            elif self.include_morph == 'multilabel':
+                with open(os.sep.join((model_dir, 'morph_enc.json')), "r") as f:
+                    self.morph_encoder = jsonpickle.loads(f.read())
+            self.deduct_secondary_informations_from_morph()
 
         if self.include_lemma == 'label':
             self.lemma_encoder = LabelEncoder()
@@ -690,3 +731,6 @@ class Preprocessor(object):
                 ph = filler.copy()
                 ph[idx] = 1
                 self.lemma_char_dict[char] = ph
+
+        if include_morph:
+            self.include_morph = include_morph

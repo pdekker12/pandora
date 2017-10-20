@@ -146,7 +146,8 @@ class Tagger():
                                max_lemma_len=self.max_lemma_len,
                                focus_repr=self.focus_repr,
                                include_lemma=self.include_lemma,
-                               include_pos=self.include_pos)
+                               include_pos=self.include_pos,
+                               include_morph=self.include_morph)
 
         print('Re-loading pretrainer...')
         self.pretrainer = Pretrainer()
