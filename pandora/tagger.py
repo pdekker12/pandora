@@ -278,6 +278,18 @@ class Tagger():
         if self.include_test:
             self.test_contexts = self.pretrainer.transform(
                 tokens=self.test_tokens)
+        try:
+            del train_transformed
+        except:
+            pass
+        try:
+            del dev_transformed
+        except:
+            pass
+        try:
+            del test_transformed
+        except:
+            pass
 
         print('Building model...')
         nb_tags = None

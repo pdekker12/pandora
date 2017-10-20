@@ -123,15 +123,16 @@ class Pretrainer:
         tokens = [t.lower() for t in tokens]
         self.mfi = [t for t, _ in Counter(tokens).most_common(self.nb_mfi)]
 
-        self.sentence_iterator = SentenceIterator(tokens=tokens)
+        sentence_iterator = SentenceIterator(tokens=tokens)
         # train embeddings:
         self.w2v_model = Word2Vec(
-            self.sentence_iterator,
+            sentence_iterator,
             window=self.window,
             min_count=self.minimum_count,
             size=self.size,
             workers=self.nb_workers,
             negative=self.nb_negative)
+        self.w2v_model.init_sims(replace=True)
 
         if viz:
             self.plot_mfi()
@@ -148,7 +149,7 @@ class Pretrainer:
         self.train_token_vocab = [k for k, v in sorted(self.token_idx.items(),
                                                        key=itemgetter(1))]
         self.pretrained_embeddings = self.get_weights(self.train_token_vocab)
-
+        del self.w2v_model
         return self
 
     def get_weights(self, vocab):
