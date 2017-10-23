@@ -162,9 +162,10 @@ class Tagger():
             include_pos=self.include_pos,
             include_morph=self.include_morph)
 
-        print('Loading known lemmas...')
-        lemmas_path = os.sep.join((self.model_dir, 'known_lemmas.txt'))
-        self.known_lemmas = set([l.strip() for l in open(lemmas_path, 'r')])
+        if self.include_lemma:
+            print('Loading known lemmas...')
+            lemmas_path = os.sep.join((self.model_dir, 'known_lemmas.txt'))
+            self.known_lemmas = set([l.strip() for l in open(lemmas_path, 'r')])
 
     def setup_to_train(self, train_data=None, dev_data=None, test_data=None,
                        build=True):
