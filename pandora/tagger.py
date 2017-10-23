@@ -51,7 +51,8 @@ class Tagger():
                  max_lemma_len=None,
                  min_lem_cnt=1,
                  overwrite=None,
-                 model='Keras'):
+                 model='Keras',
+                 test_batch_size=None):
 
         # initialize:
         self.setup = False
@@ -62,6 +63,8 @@ class Tagger():
         self.train_pos, self.dev_pos, self.test_pos = None, None, None
         self.train_morph, self.dev_morph, self.test_morph = None, None, None
         self.logger = Logger()  # Default logger uses shell
+
+        self.test_batch_size = test_batch_size or batch_size
 
         if MODELS[model] is None:
             raise ValueError("Couldn't load implementation {}".format(model))
@@ -124,6 +127,7 @@ class Tagger():
         self.char_embed_dim = \
             int(param_dict.get('char_embed_dim', char_embed_dim))
         self.curr_nb_epochs = int(param_dict.get('curr_nb_epochs', 0))
+        self.test_batch_size = int(param_dict.get('test_batch_size', self.test_batch_size))
         self.model = param_dict.get('model', model)
 
         if overwrite is not None:
@@ -387,7 +391,7 @@ class Tagger():
         if self.include_context:
             test_in['context_in'] = self.test_contexts
 
-        test_preds = self.model.predict(test_in, batch_size=self.batch_size)
+        test_preds = self.model.predict(test_in, batch_size=self.test_batch_size)
 
         if isinstance(test_preds, np.ndarray):
             test_preds = [test_preds]
@@ -486,6 +490,7 @@ class Tagger():
             F.write('min_token_freq_emb = '+str(self.min_token_freq_emb)+'\n')
             F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
             F.write('char_embed_dim = '+str(self.char_embed_dim)+'\n')
+            F.write('test_batch_size = '+str(self.test_batch_size)+'\n')
             if hasattr(self, "curr_nb_epochs"):
                 F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
 
@@ -539,7 +544,7 @@ class Tagger():
         """
 
         # get train preds:
-        train_preds = self.model.predict(train_in)
+        train_preds = self.model.predict(train_in, batch_size=self.test_batch_size)
         if isinstance(train_preds, np.ndarray):
             train_preds = [train_preds]
 
@@ -552,7 +557,7 @@ class Tagger():
             if self.include_context:
                 dev_in['context_in'] = self.dev_contexts
 
-            dev_preds = self.model.predict(dev_in)
+            dev_preds = self.model.predict(dev_in, batch_size=self.test_batch_size)
 
             if isinstance(dev_preds, np.ndarray):
                 dev_preds = [dev_preds]
