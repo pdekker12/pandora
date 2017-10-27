@@ -62,6 +62,8 @@ class Tagger():
         self.train_lemmas, self.dev_lemmas, self.test_lemmas = None, None, None
         self.train_pos, self.dev_pos, self.test_pos = None, None, None
         self.train_morph, self.dev_morph, self.test_morph = None, None, None
+        self.embed_tokens = None
+
         self.logger = Logger()  # Default logger uses shell
 
         self.test_batch_size = test_batch_size or batch_size
@@ -171,7 +173,7 @@ class Tagger():
             lemmas_path = os.sep.join((self.model_dir, 'known_lemmas.txt'))
             self.known_lemmas = set([l.strip() for l in open(lemmas_path, 'r')])
 
-    def setup_to_train(self, train_data=None, dev_data=None, test_data=None,
+    def setup_to_train(self, train_data=None, dev_data=None, test_data=None, embed_data=None,
                        build=True):
         if build:
             # create a model directory:
@@ -207,6 +209,13 @@ class Tagger():
             if self.include_test:
                 self.test_morph = test_data['morph']
 
+        if embed_data:
+            self.embed_tokens = embed_data['token']
+            #TODO: concatenate with train tokens ?
+            #in that case:
+            #self.embed_tokens = dict(embed_data['tokens'].items() + train_data['token'].items() )
+
+
         self.preprocessor = Preprocessor(categorical=self.model == 'Keras')
         self.preprocessor.fit(
             tokens=self.train_tokens,
@@ -227,7 +236,11 @@ class Tagger():
                                      nb_right_tokens=self.nb_right_tokens,
                                      size=self.nb_embedding_dims,
                                      minimum_count=self.min_token_freq_emb)
-        self.pretrainer.fit(tokens=self.train_tokens)
+
+        if self.embed_tokens is not None:
+            self.pretrainer.fit(tokens=self.embed_tokens)
+        else:
+            self.pretrainer.fit(tokens=self.train_tokens)
 
         train_transformed = self.preprocessor.transform(
             tokens=self.train_tokens,

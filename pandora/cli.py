@@ -9,7 +9,7 @@ import codecs
 import re
 
 
-def train_func(config, train, dev=None, test=None, load=False, verbose=True, first=1, each=1, eval_file=None, no_shell=False, **kwargs):
+def train_func(config, train, dev=None, test=None, embed=None, load=False, verbose=True, first=1, each=1, eval_file=None, no_shell=False, **kwargs):
     """ Main CLI Interface (training)
 
     :param config: Path to retrieve configuration file
@@ -20,6 +20,8 @@ def train_func(config, train, dev=None, test=None, load=False, verbose=True, fir
     :type dev: str
     :param test: Path to directory containing train files
     :type test: str
+    :param embed: Path to directory containing files for embeddings
+    :type embed: str
     :param load: Whether to load an existing model to train on top of it (default: False)
     :type load: bool
     :param nb_epochs: Number of epoch
@@ -89,6 +91,21 @@ def train_func(config, train, dev=None, test=None, load=False, verbose=True, fir
                 raise ValueError('No test data loaded...')
         data_sets["test_data"] = test_data
 
+    if embed is not None:
+        embed_data = pandora.utils.load_annotated_dir(
+            embed,
+            format='tab',
+            extension='.tab',
+            include_pos=False,
+            include_lemma=False,
+            include_morph=False,
+            nb_instances=None
+        )
+        if not len(embed_data.keys()) or \
+            not len(embed_data[list(embed_data.keys())[0]]):
+                raise ValueError('No embeddings data loaded...')
+        data_sets["embed_data"] = embed_data
+
     if load:
         print('::: loading model :::')
         tagger = Tagger(load=True, model_dir=params['model_dir'])
@@ -131,6 +148,7 @@ def cli_train():
     parser.add_argument("--dev", help="Path to directory containing dev files")
     parser.add_argument("--test", help="Path to directory containing test files")
     parser.add_argument("--train", help="Path to directory containing train files")
+    parser.add_argument("--embed", help="Path to directory containing files for the embeddings")
     parser.add_argument("--nb_epochs", help="Number of epoch", type=int)
     parser.add_argument(
         "--load",
