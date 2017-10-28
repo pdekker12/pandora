@@ -86,14 +86,18 @@ class PyTorchModel(nn.Module, BaseModel):
 
         if self.include_token:
             self._build_token_subnet()
+
         if self.include_context:
             self._build_context_subnet()
+
         if self.include_lemma:
             self._build_lemma_decoder()
             self._build_lemma_loss()
+
         if self.include_pos:
             self._build_pos_decoder()
             self._build_pos_loss()
+
         if self.include_morph:
             self._build_morph_decoder()
             self._build_morph_loss()
@@ -123,6 +127,7 @@ class PyTorchModel(nn.Module, BaseModel):
             lemma_weight = torch.ones(len(self.lemma_char_vector_dict))
             lemma_weight[self.lemma_char_vector_dict[PAD]] = 0
             self.lemma_loss = nn.NLLLoss(weight=lemma_weight)
+
         else:
             self.lemma_loss = nn.NLLLoss()
 
@@ -148,12 +153,14 @@ class PyTorchModel(nn.Module, BaseModel):
                 input_size=self.char_embed_dim,
                 hidden_size=self.nb_dense_dims,
                 dropout=self.dropout_level)
+
         elif self.focus_repr == 'convolutions':
             self.token_encoder = ConvEncoder(
                 in_channels=self.char_embed_dim,
                 out_channels=self.nb_filters,
                 kernel_size=self.filter_length,
                 output_size=self.nb_dense_dims)
+
         else:
             raise ValueError('Parameter `focus_repr` not understood: ' +
                              'use "recurrent" or "convolutions".')
@@ -161,6 +168,12 @@ class PyTorchModel(nn.Module, BaseModel):
     def _build_context_subnet(self):
         self.context_embeddings = nn.Embedding(
             self.nb_train_tokens, self.nb_embedding_dims)
+
+        # load pretrained embeddings
+        if self.pretrained_embeddings is not None:
+            weight = torch.from_numpy(np.array(self.pretrained_embeddings))
+            self.context_embeddings.weight.data.copy_(weight)
+
         # !diff: seq_len doesn't require dense weights
         self.context_encoder = nn.Linear(
             self.nb_embedding_dims, self.nb_dense_dims)
@@ -177,6 +190,7 @@ class PyTorchModel(nn.Module, BaseModel):
                 include_context=self.include_context)
             # tie embeddings
             self.lemma_decoder.embeddings.weight = self.token_embeddings.weight
+
         elif self.include_lemma == 'label':
             if self.include_context:
                 in_dim = self.joined_dim
@@ -206,6 +220,7 @@ class PyTorchModel(nn.Module, BaseModel):
                 nn.ReLU(),  # TODO: perhaps remove ReLU before softmax
                 nn.Dropout(self.dropout_level),
                 nn.LogSoftmax())
+
         elif self.include_morph == 'multilabel':
             self.morph_decoder = nn.Sequential(
                 # morph_dense1
@@ -282,8 +297,10 @@ class PyTorchModel(nn.Module, BaseModel):
             lemma_out = (train_out or {}).get('lemma_out', None)
             out.append(self.lemma_decoder(
                 token_out, context_out, token_context, lemma_out))
+
         if self.include_pos:
             out.append(self.pos_decoder(joined))
+
         if self.include_morph:
             out.append(self.morph_decoder(joined))
 
@@ -294,14 +311,18 @@ class PyTorchModel(nn.Module, BaseModel):
         out_dict = {}
         if self.include_lemma:
             out_dict['lemma_out'] = out.pop(0)
+
         if self.include_pos:
             out_dict['pos_out'] = out.pop(0)
+
         if self.include_morph:
             out_dict['morph_out'] = out.pop(0)
+
         return out_dict
 
     def loss(self, output, target, output_label):
         if output_label == 'lemma_out':
+
             if self.include_lemma == 'generate':
                 # collapse batch and seq dimensions
                 output = output.transpose(0, 1) \
@@ -311,10 +332,13 @@ class PyTorchModel(nn.Module, BaseModel):
                 target = target[:, 1:].contiguous()
                 target = target.view(-1)
                 return self.lemma_loss(output, target)
+
             else:
                 return self.lemma_loss(output, target)
+
         elif output_label == 'pos_out':
             return self.pos_loss(output, target)
+
         elif output_label == 'morph_out':
             return self.morph_loss(output, target)
 
@@ -371,14 +395,17 @@ class PyTorchModel(nn.Module, BaseModel):
                         array = output.transpose(0, 1).cpu().numpy()
                     else:           # 'label'
                         array = output.cpu().numpy()
+
                 elif output_label == 'pos_out':
                     array = output.cpu().numpy()
+
                 else:               # 'morph_out'
                     array = output.cpu().numpy()
 
                 # concatenate to previous batch predictions
                 if output_label not in out:
                     out[output_label] = array
+
                 else:
                     array = np.concatenate([out[output_label], array])
                     out[output_label] = array
