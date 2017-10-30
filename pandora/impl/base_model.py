@@ -70,6 +70,13 @@ class BaseModel(object):
         from which an existing model will be re-loaded.
     """
 
+    def print_summary(self):
+        """
+        Print a summary of the model layer by layer, and recount number
+        of parameters, non-trainable parameters and total number of parameters
+        """
+        raise NotImplementedError
+
     def adjust_lr(self, adjust_rate=0.5):
         """
         Halves the current learning rate of the model.

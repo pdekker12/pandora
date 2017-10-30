@@ -352,6 +352,8 @@ class Tagger():
             char_embed_dim=self.char_embed_dim,
             batch_size=self.batch_size)
 
+        self.model.print_summary()
+
         self.setup = True
         self.save()
 

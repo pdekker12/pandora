@@ -100,6 +100,23 @@ class PyTorchModel(nn.Module, BaseModel):
 
         self.optimizer = Optimizer(self.parameters(), 'Adam', lr=0.01)
 
+    def print_summary(self):
+        # print model
+        print(self)
+        print()
+
+        # print trainable parameters
+        trainable, nontrainable = 0, 0
+        for param in self.parameters():
+            if param.requires_grad:
+                trainable += param.nelement()
+            else:
+                nontrainable += param.nelement()
+
+        print("* Number of trainable parameters: {}".format(trainable))
+        print("* Number of non trainable parameters: {}".format(nontrainable))
+        print("* Total parameters {}".format(trainable + nontrainable))
+
     def _build_lemma_loss(self):
         if self.include_lemma == 'generate':
             # weight down loss on padding

@@ -60,6 +60,9 @@ class KerasModel(BaseModel):
         if build:
             self._build()
 
+    def print_summary(self):
+        print(self.model.summary())
+
     def _build(self):
         """
         Function that builds/compiles the actual model based
