@@ -13,9 +13,11 @@ from torch.autograd import Variable
 
 from pandora.impl.base_model import BaseModel
 
-from pandora.impl.pytorch.encoder import RNNEncoder, ConvEncoder
+from pandora.impl.pytorch.encoder import (
+    RNNEncoder, ConvEncoder, BottleEncoder)
 from pandora.impl.pytorch.decoder import AttentionalDecoder, LinearDecoder
 from pandora.impl.pytorch.utils import Optimizer, BatchIterator, Progbar
+from pandora.impl.pytorch import utils
 from pandora.utils import PAD
 
 
@@ -70,7 +72,7 @@ class PyTorchModel(nn.Module, BaseModel):
         if self.include_token:
             self.joined_dim = self.nb_dense_dims
         if self.include_context:
-            self.joined_dim += (self.nb_dense_dims * self.nb_context_tokens)
+            self.joined_dim += self.nb_dense_dims
         super(PyTorchModel, self).__init__()
 
         # gpu
@@ -104,7 +106,7 @@ class PyTorchModel(nn.Module, BaseModel):
             self._build_morph_decoder()
             self._build_morph_loss()
 
-        self.optimizer = Optimizer(self.parameters(), 'Adam', lr=0.01)
+        self.optimizer = Optimizer(self.parameters(), 'Adam', lr=0.001)
 
     def print_summary(self):
         # print model
@@ -148,20 +150,32 @@ class PyTorchModel(nn.Module, BaseModel):
             len(self.token_char_vector_dict),
             self.char_embed_dim)
 
+        # init embeddings
+        utils.init_embeddings(self.token_embeddings)
+
         # encoder
         if self.focus_repr == 'recurrent':
             self.token_encoder = RNNEncoder(
                 num_layers=self.nb_encoding_layers,
                 input_size=self.char_embed_dim,
                 hidden_size=self.nb_dense_dims,
-                dropout=self.dropout_level)
+                dropout=self.dropout_level,
+                merge_mode='concat')
 
         elif self.focus_repr == 'convolutions':
+
+            if self.include_lemma and self.include_lemma == 'generate':
+                if self.nb_filters != self.nb_dense_dims:
+                    raise ValueError(
+                        "Using convolutional encoding with generated lemmas "
+                        "needs same number of filters and dense dimensions")
+
             self.token_encoder = ConvEncoder(
                 in_channels=self.char_embed_dim,
                 out_channels=self.nb_filters,
                 kernel_size=self.filter_length,
-                output_size=self.nb_dense_dims)
+                output_size=self.nb_dense_dims,
+                token_len=self.token_len)
 
         else:
             raise ValueError('Parameter `focus_repr` not understood: ' +
@@ -176,22 +190,26 @@ class PyTorchModel(nn.Module, BaseModel):
             weight = torch.from_numpy(np.array(self.pretrained_embeddings))
             self.context_embeddings.weight.data.copy_(weight)
 
-        # !diff: seq_len doesn't require dense weights
-        self.context_encoder = nn.Linear(
-            self.nb_embedding_dims, self.nb_dense_dims)
+        self.context_encoder = BottleEncoder(
+            self.nb_embedding_dims, self.nb_dense_dims,
+            seq_len=self.nb_context_tokens, dropout=self.dropout_level)
 
     def _build_lemma_decoder(self):
         if self.include_lemma == 'generate':
-            if self.focus_repr != 'recurrent':
-                raise ValueError(
-                    'lemma generator requires `recurrent` focus_repr')
             self.lemma_decoder = AttentionalDecoder(
                 char_dict=self.lemma_char_vector_dict,
                 hidden_size=self.nb_dense_dims,
                 char_embed_dim=self.char_embed_dim,
                 include_context=self.include_context)
+
             # tie embeddings
-            self.lemma_decoder.embeddings.weight = self.token_embeddings.weight
+            lemma_emb_size = self.lemma_decoder.embeddings.weight.size()
+            token_emb_size = self.token_embeddings.weight.size()
+            if lemma_emb_size == token_emb_size:
+                self.lemma_decoder.embeddings.weight = \
+                    self.token_embeddings.weight
+            else:
+                print("Lemma embedding size and token embedding size are not the same")  # Would it be an error ?
 
         elif self.include_lemma == 'label':
             if self.include_context:
@@ -201,11 +219,17 @@ class PyTorchModel(nn.Module, BaseModel):
             self.lemma_decoder = LinearDecoder(
                 in_dim, self.nb_lemmas, include_context=self.include_context)
 
+        else:
+            raise ValueError(
+                "include_lemma must be either `generate` or `label`")
+
     def _build_pos_decoder(self):
         self.pos_decoder = nn.Sequential(
             nn.Linear(self.joined_dim, self.nb_tags),
             nn.Dropout(self.dropout_level),
             nn.LogSoftmax())
+
+        utils.init_sequential_linear(self.pos_decoder)
 
     def _build_morph_decoder(self):
         if self.include_morph == 'label':
@@ -238,6 +262,8 @@ class PyTorchModel(nn.Module, BaseModel):
                 nn.Dropout(self.dropout_level),
                 nn.Tanh())
 
+        utils.init_sequential_linear(self.morph_decoder)
+
     def move_to_gpu(self, gpu=True):
         self.gpu = gpu
         if gpu:
@@ -262,31 +288,23 @@ class PyTorchModel(nn.Module, BaseModel):
         token_out, context_out, token_context, joined = None, None, None, []
         if self.include_token:
             # (batch x token_len x emb_dim)
-            token_embed = self.token_embeddings(train_in['focus_in'])
-            token_embed = token_embed.transpose(0, 1)
-            token_out = self.token_encoder(token_embed)
-            if self.focus_repr == 'recurrent':
-                # if 'recurrent':
-                #     token_out (seq_len x batch x nb_dense_dims)
-                # if 'convolutions':
-                #     token_out (batch x nb_dense_dims)
-                token_context = token_out  # save encoder output for attn
-                token_out = token_out[-1]
+            token_out = self.token_embeddings(train_in['focus_in'])
+            token_out = token_out.transpose(0, 1)
+            # (batch x hidden), (seq_len x batch x hidden) where seq_len
+            # is either the rnn seq_len, or the convolutional seq_len
+            token_out, token_context = self.token_encoder(token_out)
             joined.append(token_out)
 
         if self.include_context:
             # (batch x seq_len x emb_dim)
-            context_embed = self.context_embeddings(train_in['context_in'])
-            batch, seq_len, emb_dim = context_embed.size()
+            context_out = self.context_embeddings(train_in['context_in'])
             context_out = F.dropout(
-                context_embed, p=self.dropout_level, training=self.training)
+                context_out, p=self.dropout_level, training=self.training)
+            # (batch x emb_dim x seq_len)
+            context_out = context_out.transpose(1, 2)
             context_out = F.relu(context_out)
-            # (batch x seq_len x emb_dim) -> (batch * seq_len x emb_dim)
-            context_out = context_out.view(batch * seq_len, emb_dim)
-            # (batch * seq_len x nb_dense_dims)
+            # (batch x nb_dense_dims)
             context_out = self.context_encoder(context_out)
-            # (batch x seq_len * nb_dense_dims)
-            context_out = context_out.view(batch, -1)
             context_out = F.dropout(
                 context_out, p=self.dropout_level, training=self.training)
             context_out = F.relu(context_out)
@@ -296,6 +314,7 @@ class PyTorchModel(nn.Module, BaseModel):
 
         out = []
         if self.include_lemma:
+            # maybe get lemma_out, (if training)
             lemma_out = (train_out or {}).get('lemma_out', None)
             out.append(self.lemma_decoder(
                 token_out, context_out, token_context, lemma_out))
