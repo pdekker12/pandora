@@ -3,6 +3,10 @@ import os
 import shutil
 
 from pandora.tagger import Tagger
+from pandora.tagger import MODELS
+
+
+TEST, DEV, TRAIN = "data/geste/test", "data/geste/dev", "data/geste/train"
 
 
 class TestConfigLoader(TestCase):
@@ -46,7 +50,10 @@ class TestConfigLoader(TestCase):
 
     def test_load_after_save(self):
         """ Ensure param are correctly saved """
-        tagger = Tagger(config_path="./tests/test_configs/config_chrestien.txt")
+        tagger = Tagger.setup_from_disk(
+            config_path="./tests/test_configs/config_chrestien.txt", train_data=TRAIN, dev_data=DEV, test_data=TEST,
+            pretrainer_nb_workers=2
+        )
         tagger.include_pos = False
         tagger.curr_nb_epochs = 10
         tagger.save_params()
@@ -79,3 +86,7 @@ class TestConfigLoader(TestCase):
         self.assertEqual(tagger.max_token_len, 20, "max_token_len should be correctly loaded")
         self.assertEqual(tagger.min_lem_cnt, 1, "min_lem_cnt should be correctly loaded")
         self.assertEqual(tagger.curr_nb_epochs, 10, "Current number of epochs should be correctly loaded")
+        self.assertEqual(tagger.model, "PyTorch", "PyTorch implementation is loaded")
+        tagger = Tagger(config_path="./fake_model/config.txt", load=True)
+        self.assertIsInstance(tagger.model, MODELS["PyTorch"], "PyTorch implementation is loaded")
+

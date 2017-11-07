@@ -17,7 +17,7 @@ from pandora.pretraining import Pretrainer
 from pandora.logger import Logger
 
 
-MODELS = {'Keras': KerasModel, 'PyTorch': PyTorchModel}
+MODELS = {KerasModel.CONFIG_KEY: KerasModel, PyTorchModel.CONFIG_KEY: PyTorchModel}
 
 
 class Tagger():
@@ -144,6 +144,118 @@ class Tagger():
         if load:
             self.load()
 
+    @staticmethod
+    def setup_from_disk(
+            config_path,
+            train_data=None, dev_data=None, test_data=None, verbose=False,
+            load=False, **kwargs
+    ):
+        """ Command to load the whole tagger through a config.txt file and the path to some data
+
+        :param config_path:
+        :param train_data:
+        :param dev_data:
+        :param test_data:
+        :return:
+        :rtype: Tagger
+        """
+        if verbose:
+            print('::: started :::')
+
+        params = utils.get_param_dict(config_path)
+        params['config_path'] = config_path
+        params.update({k: v for k, v in kwargs.items() if v is not None and k not in ["pretrainer_nb_workers"]})
+
+        if verbose:
+            print("::: Loaded Config :::")
+            for k, v in params.items():
+                print("\t{} : {}".format(k, v))
+
+        train_data = utils.load_annotated_dir(
+            train_data,
+            format='tab',
+            extension='.tab',
+            include_pos=params['include_pos'],
+            include_lemma=params['include_lemma'],
+            include_morph=params['include_morph'],
+            nb_instances=None
+        )
+
+        if not len(train_data.keys()) or \
+                not len(train_data[list(train_data.keys())[0]]):
+            raise ValueError('No training data loaded...')
+
+        data_sets = dict(
+            train_data=train_data,
+        )
+
+        if dev_data is not None:
+            dev_data = utils.load_annotated_dir(
+                dev_data,
+                format='tab',
+                extension='.tab',
+                include_pos=params['include_pos'],
+                include_lemma=params['include_lemma'],
+                include_morph=params['include_morph'],
+                nb_instances=None
+            )
+            if not len(dev_data.keys()) or \
+                    not len(dev_data[list(dev_data.keys())[0]]):
+                raise ValueError('No dev data loaded...')
+            data_sets["dev_data"] = dev_data
+
+        if test_data is not None:
+            test_data = utils.load_annotated_dir(
+                test_data,
+                format='tab',
+                extension='.tab',
+                include_pos=params['include_pos'],
+                include_lemma=params['include_lemma'],
+                include_morph=params['include_morph'],
+                nb_instances=None
+            )
+            if not len(test_data.keys()) or \
+                    not len(test_data[list(test_data.keys())[0]]):
+                raise ValueError('No test data loaded...')
+            data_sets["test_data"] = test_data
+
+        if "embed" in kwargs:
+            embed_data = utils.load_annotated_dir(
+                kwargs["embed"],
+                format='tab',
+                extension='.tab',
+                include_pos=False,
+                include_lemma=False,
+                include_morph=False,
+                nb_instances=None
+            )
+            if not len(embed_data.keys()) or \
+                    not len(embed_data[list(embed_data.keys())[0]]):
+                raise ValueError('No embeddings data loaded...')
+            data_sets["embed_data"] = embed_data
+
+        if load:
+            if verbose:
+                print('::: loading model :::')
+            tagger = Tagger(load=True, model_dir=params['model_dir'])
+            if tagger.config_path == os.sep.join((tagger.model_dir, 'config.txt')):
+                shutil.copy(tagger.config_path, os.sep.join((tagger.model_dir, 'config_original.txt')))
+                if verbose:
+                    print('Warning: current config file will be overwritten. Saving it to config_original.txt')
+            tagger.setup_to_train(build=False, **data_sets)
+            tagger.curr_nb_epochs = int(params['curr_nb_epochs'])
+            if verbose:
+                print("restart from epoch " + str(tagger.curr_nb_epochs) + "...")
+            tagger.setup = True
+        else:
+            tagger = Tagger(**params)
+            tagger.setup_to_train(
+                nb_pretrainer_workers=kwargs.get("pretrainer_nb_workers", Pretrainer.DEFAULT_NB_WORKERS),
+                **data_sets
+            )
+
+        return tagger
+
     def load(self):
         print('Re-loading preprocessor...')
         self.preprocessor = Preprocessor(categorical=self.model == 'Keras')
@@ -174,7 +286,7 @@ class Tagger():
             self.known_lemmas = set([l.strip() for l in open(lemmas_path, 'r')])
 
     def setup_to_train(self, train_data=None, dev_data=None, test_data=None, embed_data=None,
-                       build=True):
+                       build=True, nb_pretrainer_workers=None):
         if build:
             # create a model directory:
             if os.path.isdir(self.model_dir):
@@ -215,7 +327,6 @@ class Tagger():
             #in that case:
             #self.embed_tokens = dict(embed_data['tokens'].items() + train_data['token'].items() )
 
-
         self.preprocessor = Preprocessor(categorical=self.model == 'Keras')
         self.preprocessor.fit(
             tokens=self.train_tokens,
@@ -235,7 +346,8 @@ class Tagger():
         self.pretrainer = Pretrainer(nb_left_tokens=self.nb_left_tokens,
                                      nb_right_tokens=self.nb_right_tokens,
                                      size=self.nb_embedding_dims,
-                                     minimum_count=self.min_token_freq_emb)
+                                     minimum_count=self.min_token_freq_emb,
+                                     nb_workers=nb_pretrainer_workers)
 
         if self.embed_tokens is not None:
             self.pretrainer.fit(tokens=self.embed_tokens)
@@ -506,6 +618,7 @@ class Tagger():
             F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
             F.write('char_embed_dim = '+str(self.char_embed_dim)+'\n')
             F.write('test_batch_size = '+str(self.test_batch_size)+'\n')
+            F.write('model = '+str(self.model.CONFIG_KEY)+'\n')
             if hasattr(self, "curr_nb_epochs"):
                 F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
 

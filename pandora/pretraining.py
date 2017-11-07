@@ -66,6 +66,7 @@ class Pretrainer:
     * can be used to shingle a list of tokens into
       the context vectors for the model.
     """
+    DEFAULT_NB_WORKERS = 10
 
     def __init__(self, nb_left_tokens=None, nb_right_tokens=None,
                  sentence_len=100, window=5,
@@ -104,7 +105,7 @@ class Pretrainer:
         self.nb_mfi = nb_mfi
         self.window = window
         self.minimum_count = minimum_count
-        self.nb_workers = nb_workers
+        self.nb_workers = nb_workers or Pretrainer.DEFAULT_NB_WORKERS
         self.nb_negative = nb_negative
 
     def fit(self, tokens, viz=False):

@@ -22,6 +22,8 @@ class KerasModel(BaseModel):
     """
     Keras Implementation of the Base Model
     """
+    CONFIG_KEY = "Keras"
+
     def __init__(self, batch_size, token_len=None, token_char_vector_dict=None,
                  lemma_len=None, lemma_char_vector_dict=None,
                  nb_encoding_layers=None, nb_dense_dims=None, nb_tags=None,

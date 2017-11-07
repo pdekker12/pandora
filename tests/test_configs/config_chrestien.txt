@@ -25,4 +25,4 @@ nb_epochs = 3
 halve_lr_at = 75
 max_token_len = 20
 min_lem_cnt = 1
-
+model = PyTorch

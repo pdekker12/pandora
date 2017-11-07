@@ -30,6 +30,8 @@ class PyTorchModel(nn.Module, BaseModel):
     gpu : bool
         Whether to run the model on the gpu or not.
     """
+    CONFIG_KEY = "PyTorch"
+
     def __init__(self, token_len=None, token_char_vector_dict=None,
                  lemma_len=None, lemma_char_vector_dict=None,
                  nb_encoding_layers=None, nb_dense_dims=None, nb_tags=None,

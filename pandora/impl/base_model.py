@@ -69,6 +69,7 @@ class BaseModel(object):
         must be a string pointing to an existing model directory
         from which an existing model will be re-loaded.
     """
+    CONFIG_KEY = "base"
 
     def print_summary(self):
         """

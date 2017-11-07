@@ -1,3 +1,12 @@
+# Top Level noise
+/*.csv
+/*.txt
+/*.zip
+# Ignore data folder
+data/
+# But not example data
+!data/geste
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
