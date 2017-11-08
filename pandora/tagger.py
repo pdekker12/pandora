@@ -148,7 +148,7 @@ class Tagger():
     def setup_from_disk(
             config_path,
             train_data=None, dev_data=None, test_data=None, verbose=False,
-            load=False, **kwargs
+            load=False, embed=False, **kwargs
     ):
         """ Command to load the whole tagger through a config.txt file and the path to some data
 
@@ -172,7 +172,7 @@ class Tagger():
                 print("\t{} : {}".format(k, v))
 
         train_data = utils.load_annotated_dir(
-            train_data,
+            directory=train_data,
             format='tab',
             extension='.tab',
             include_pos=params['include_pos'],
@@ -189,9 +189,9 @@ class Tagger():
             train_data=train_data,
         )
 
-        if dev_data is not None:
+        if dev_data:
             dev_data = utils.load_annotated_dir(
-                dev_data,
+                directory=dev_data,
                 format='tab',
                 extension='.tab',
                 include_pos=params['include_pos'],
@@ -204,9 +204,9 @@ class Tagger():
                 raise ValueError('No dev data loaded...')
             data_sets["dev_data"] = dev_data
 
-        if test_data is not None:
+        if test_data:
             test_data = utils.load_annotated_dir(
-                test_data,
+                directory=test_data,
                 format='tab',
                 extension='.tab',
                 include_pos=params['include_pos'],
@@ -219,9 +219,9 @@ class Tagger():
                 raise ValueError('No test data loaded...')
             data_sets["test_data"] = test_data
 
-        if "embed" in kwargs:
+        if embed:
             embed_data = utils.load_annotated_dir(
-                kwargs["embed"],
+                kwargs['embed'],
                 format='tab',
                 extension='.tab',
                 include_pos=False,
