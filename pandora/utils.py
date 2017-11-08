@@ -58,7 +58,6 @@ def load_annotated_dir(directory='directory', format='tab',
     ===========
     Supported input data formats are described below.
     """
-
     instances = {'token': []}
     if include_lemma:
         instances['lemma'] = []
@@ -66,6 +65,7 @@ def load_annotated_dir(directory='directory', format='tab',
         instances['pos'] = []
     if include_morph:
         instances['morph'] = []
+
     for root, dirs, files in os.walk(directory):
         for name in sorted(files):
             filepath = os.path.join(root, name)
