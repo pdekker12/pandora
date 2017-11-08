@@ -156,6 +156,9 @@ class Tagger():
         :param train_data:
         :param dev_data:
         :param test_data:
+        :param verbose:
+        :param load:
+        :param embed:
         :return:
         :rtype: Tagger
         """
@@ -221,7 +224,7 @@ class Tagger():
 
         if embed:
             embed_data = utils.load_annotated_dir(
-                kwargs['embed'],
+                embed,
                 format='tab',
                 extension='.tab',
                 include_pos=False,
