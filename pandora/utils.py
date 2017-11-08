@@ -6,6 +6,7 @@ from __future__ import print_function
 import os
 import codecs
 import re
+import json
 import configparser as ConfigParser
 
 import numpy as np
@@ -293,41 +294,76 @@ def stats(tokens, lemmas, known):
     print('Nb of unique lemmas: ', len(set(lemmas)))
 
 
-def get_param_dict(p):
+class Settings(dict):
+    def __init__(self, *args, **kwargs):
+        super(Settings, self).__init__(*args, **kwargs)
+        for arg in args:
+            if isinstance(arg, dict):
+                for k, v in arg.items():
+                    self[k] = v
+
+        if kwargs:
+            for k, v in kwargs.iteritems():
+                self[k] = v
+
+    def __getattr__(self, attr):
+        return self.get(attr)
+
+    def __setattr__(self, key, value):
+        self.__setitem__(key, value)
+
+    def __setitem__(self, key, value):
+        super(Settings, self).__setitem__(key, value)
+        self.__dict__.update({key: value})
+
+    def __delattr__(self, item):
+        self.__delitem__(item)
+
+    def __delitem__(self, key):
+        super(Settings, self).__delitem__(key)
+        del self.__dict__[key]
+
+
+def parse_param_file(config_path, verbose=True):
     """Loads and parses a parameter file.
 
     Parameters
     ===========
     p : str
-        The path to the parameter file.
+        The path to the parameter file, formatted as json.
 
     Returns
     ===========
-    param_dict : dict
-        * A dict the parameters.
-        * Instances of 'True' and 'False' are
-        casted to bools.
+    P : dict
+        * A dictionary with the parameters
     """
-    def read_sections(config):
-        param_dict = dict()
-        for section in config.sections():
-            for name, value in config.items(section):
-                if value == 'True':
-                    value = True
-                elif value == 'False':
-                    value = False
-                elif value == 'None':
-                    value = None
-                param_dict[name] = value
-        return param_dict
 
     try:
-        config = ConfigParser.ConfigParser()
-        config.read(p)
-        return read_sections(config)
+        with open(config_path, 'r') as f:
+            p = json.load(f)
     except Exception as e:
         raise ValueError(
-            "Couldn't read config file: %s. Exception: %s" % (p, str(e)))
+            "Couldn't read config file: %s. Exception: %s" % (config, str(e)))
+
+    settings = Settings(p)
+    # add default values for missing settings:
+    with open(os.sep.join((os.path.dirname(__file__),
+                          'default_settings.json')), 'r') as f:
+        defaults = json.load(f)
+
+    for k in defaults:
+        if k not in settings:
+            settings[k] = defaults[k]
+
+    # store the config path too:
+    settings.config_path = config_path
+
+    if verbose:
+        print("::: Loaded Config :::")
+        for k, v in settings.items():
+            print("\t{} : {}".format(k, v))
+    
+    return settings
 
 
 def to_categorical(y, num_classes=None):

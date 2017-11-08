@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 import os
+import json
 import shutil
 
 import numpy as np
@@ -21,41 +22,11 @@ MODELS = {KerasModel.CONFIG_KEY: KerasModel, PyTorchModel.CONFIG_KEY: PyTorchMod
 
 
 class Tagger():
-    def __init__(self,
-                 config_path=None,
-                 nb_encoding_layers=1,
-                 nb_dense_dims=30,
-                 char_embed_dim=50,
-                 batch_size=100,
-                 nb_left_tokens=2,
-                 nb_right_tokens=2,
-                 nb_embedding_dims=150,
-                 model_dir='new_model',
-                 postcorrect=True,
-                 include_token=True,
-                 include_context=True,
-                 include_lemma=True,
-                 include_pos=True,
-                 include_morph=True,
-                 include_dev=True,
-                 include_test=True,
-                 nb_filters=100,
-                 filter_length=3,
-                 focus_repr='recurrent',
-                 dropout_level=.1,
-                 load=False,
-                 nb_epochs=15,
-                 min_token_freq_emb=5,
-                 halve_lr_at=10,
-                 max_token_len=None,
-                 max_lemma_len=None,
-                 min_lem_cnt=1,
-                 overwrite=None,
-                 model='Keras',
-                 test_batch_size=None):
+    def __init__(self, settings, config_path=None, overwrite=None, load=False):
 
         # initialize:
         self.setup = False
+        self.settings = settings
         self.curr_nb_epochs = 0
 
         self.train_tokens, self.dev_tokens, self.test_tokens = None, None, None
@@ -66,80 +37,32 @@ class Tagger():
 
         self.logger = Logger()  # Default logger uses shell
 
-        self.test_batch_size = test_batch_size or batch_size
+        #self.test_batch_size = test_batch_size or batch_size
 
-        if MODELS[model] is None:
-            raise ValueError("Couldn't load implementation {}".format(model))
+        if MODELS[settings.backend] is None:
+            raise ValueError("Couldn't load implementation {}".format(settings.backend))
 
         if config_path is not None:
-            param_dict = utils.get_param_dict(config_path)
+            self.settings = utils.parse_param_file(config_path)
         elif load is True:
-            if model_dir:
-                config_path = os.sep.join((model_dir, 'config.txt'))
-                param_dict = utils.get_param_dict(config_path)
+            if settings.model_dir:
+                config_path = os.sep.join((settings.model_dir, 'config.txt'))
+                self.settings = utils.parse_param_file(config_path)
                 print('Using params from config file: %s' % config_path)
             else:
                 raise ValueError(
                     'To load a tagger you, must specify a model_name!')
         else:
-            param_dict = {}
-
-        self.nb_encoding_layers = \
-            int(param_dict.get('nb_encoding_layers', nb_encoding_layers))
-        self.nb_dense_dims = \
-            int(param_dict.get('nb_dense_dims', nb_dense_dims))
-        self.batch_size = int(param_dict.get('batch_size', batch_size))
-        self.nb_epochs = int(param_dict.get('nb_epochs', nb_epochs))
-        self.nb_left_tokens = \
-            int(param_dict.get('nb_left_tokens', nb_left_tokens))
-        self.nb_right_tokens = \
-            int(param_dict.get('nb_right_tokens', nb_right_tokens))
-        self.nb_context_tokens = self.nb_left_tokens + self.nb_right_tokens
-        self.nb_embedding_dims = \
-            int(param_dict.get('nb_embedding_dims', nb_embedding_dims))
-        self.model_dir = param_dict.get('model_dir', model_dir)
-        self.postcorrect = bool(param_dict.get('postcorrect', postcorrect))
-        self.nb_filters = int(param_dict.get('nb_filters', nb_filters))
-        self.filter_length = \
-            int(param_dict.get('filter_length', filter_length))
-        self.focus_repr = param_dict.get('focus_repr', focus_repr)
-        self.dropout_level = \
-            float(param_dict.get('dropout_level', dropout_level))
-        self.include_token = param_dict.get('include_token', include_token)
-        self.include_context = \
-            param_dict.get('include_context', include_context)
-        self.include_lemma = param_dict.get('include_lemma', include_lemma)
-        self.include_pos = param_dict.get('include_pos', include_pos)
-        self.include_morph = param_dict.get('include_morph', include_morph)
-        self.include_dev = param_dict.get('include_dev', include_dev)
-        self.include_test = param_dict.get('include_test', include_test)
-        self.min_token_freq_emb = \
-            int(param_dict.get('min_token_freq_emb', min_token_freq_emb))
-        self.halve_lr_at = int(param_dict.get('halve_lr_at', halve_lr_at))
-
-        self.max_token_len = param_dict.get('max_token_len', max_token_len)
-        if self.max_token_len is not None:
-            self.max_token_len = int(self.max_token_len)
-
-        self.max_lemma_len = param_dict.get('max_lemma_len', max_lemma_len)
-        if self.max_lemma_len is not None:
-            self.max_lemma_len = int(self.max_lemma_len)
-
-        self.min_lem_cnt = int(param_dict.get('min_lem_cnt', min_lem_cnt))
-        self.char_embed_dim = \
-            int(param_dict.get('char_embed_dim', char_embed_dim))
-        self.curr_nb_epochs = int(param_dict.get('curr_nb_epochs', 0))
-        self.test_batch_size = int(param_dict.get('test_batch_size', self.test_batch_size))
-        self.model = param_dict.get('model', model)
+            self.settings = settings
 
         if overwrite is not None:
             # Overwrite should be a dict of attributes to update the tagger
-            for key, value in overwrite.items():
-                self.__setattr__(key, value)
+            for k, v in overwrite.items():
+                self.settings[k] = v
 
         # create a models directory if it isn't there already
-        if not os.path.isdir(self.model_dir):
-            os.mkdir(model_dir)
+        if not os.path.isdir(settings.model_dir):
+            os.mkdir(settings.model_dir)
 
         if load:
             self.load()
@@ -148,7 +71,7 @@ class Tagger():
     def setup_from_disk(
             config_path,
             train_data=None, dev_data=None, test_data=None, verbose=False,
-            load=False, embed=False, **kwargs
+            load=False, **kwargs
     ):
         """ Command to load the whole tagger through a config.txt file and the path to some data
 
@@ -162,22 +85,15 @@ class Tagger():
         if verbose:
             print('::: started :::')
 
-        params = utils.get_param_dict(config_path)
-        params['config_path'] = config_path
-        params.update({k: v for k, v in kwargs.items() if v is not None and k not in ["pretrainer_nb_workers"]})
-
-        if verbose:
-            print("::: Loaded Config :::")
-            for k, v in params.items():
-                print("\t{} : {}".format(k, v))
+        settings = utils.parse_param_file(config_path, verbose)
 
         train_data = utils.load_annotated_dir(
             directory=train_data,
             format='tab',
             extension='.tab',
-            include_pos=params['include_pos'],
-            include_lemma=params['include_lemma'],
-            include_morph=params['include_morph'],
+            include_pos=settings.include_pos,
+            include_lemma=settings.include_lemma,
+            include_morph=settings.include_morph,
             nb_instances=None
         )
 
@@ -194,9 +110,9 @@ class Tagger():
                 directory=dev_data,
                 format='tab',
                 extension='.tab',
-                include_pos=params['include_pos'],
-                include_lemma=params['include_lemma'],
-                include_morph=params['include_morph'],
+                include_pos=settings.include_pos,
+                include_lemma=settings.include_lemma,
+                include_morph=settings.include_morph,
                 nb_instances=None
             )
             if not len(dev_data.keys()) or \
@@ -209,9 +125,9 @@ class Tagger():
                 directory=test_data,
                 format='tab',
                 extension='.tab',
-                include_pos=params['include_pos'],
-                include_lemma=params['include_lemma'],
-                include_morph=params['include_morph'],
+                include_pos=settings.include_pos,
+                include_lemma=settings.include_lemma,
+                include_morph=settings.include_morph,
                 nb_instances=None
             )
             if not len(test_data.keys()) or \
@@ -219,9 +135,9 @@ class Tagger():
                 raise ValueError('No test data loaded...')
             data_sets["test_data"] = test_data
 
-        if embed:
+        if settings.embed:
             embed_data = utils.load_annotated_dir(
-                kwargs['embed'],
+                settings.embed,
                 format='tab',
                 extension='.tab',
                 include_pos=False,
@@ -237,9 +153,9 @@ class Tagger():
         if load:
             if verbose:
                 print('::: loading model :::')
-            tagger = Tagger(load=True, model_dir=params['model_dir'])
+            tagger = Tagger(load=True, settings=settings)
             if tagger.config_path == os.sep.join((tagger.model_dir, 'config.txt')):
-                shutil.copy(tagger.config_path, os.sep.join((tagger.model_dir, 'config_original.txt')))
+                shutil.copy(tagger.settings.config_path, os.sep.join((tagger.settings.model_dir, 'config_original.txt')))
                 if verbose:
                     print('Warning: current config file will be overwritten. Saving it to config_original.txt')
             tagger.setup_to_train(build=False, **data_sets)
@@ -248,17 +164,14 @@ class Tagger():
                 print("restart from epoch " + str(tagger.curr_nb_epochs) + "...")
             tagger.setup = True
         else:
-            tagger = Tagger(**params)
-            tagger.setup_to_train(
-                nb_pretrainer_workers=kwargs.get("pretrainer_nb_workers", Pretrainer.DEFAULT_NB_WORKERS),
-                **data_sets
-            )
+            tagger = Tagger(settings=settings)
+            tagger.setup_to_train(**data_sets)
 
         return tagger
 
     def load(self):
         print('Re-loading preprocessor...')
-        self.preprocessor = Preprocessor(categorical=self.model == 'Keras')
+        self.preprocessor = Preprocessor(categorical=self.backend == 'Keras')
         self.preprocessor.load(model_dir=self.model_dir,
                                max_token_len=self.max_token_len,
                                max_lemma_len=self.max_lemma_len,
@@ -285,40 +198,40 @@ class Tagger():
             lemmas_path = os.sep.join((self.model_dir, 'known_lemmas.txt'))
             self.known_lemmas = set([l.strip() for l in open(lemmas_path, 'r')])
 
-    def setup_to_train(self, train_data=None, dev_data=None, test_data=None, embed_data=None,
-                       build=True, nb_pretrainer_workers=None):
+    def setup_to_train(self, train_data, dev_data=None, test_data=None,
+                       embed_data=None, build=True):
         if build:
             # create a model directory:
-            if os.path.isdir(self.model_dir):
-                shutil.rmtree(self.model_dir)
-            os.mkdir(self.model_dir)
+            if os.path.isdir(self.settings.model_dir):
+                shutil.rmtree(self.settings.model_dir)
+            os.mkdir(self.settings.model_dir)
 
         self.train_tokens = train_data['token']
-        if self.include_test:
+        if self.settings.include_test:
             self.test_tokens = test_data['token']
-        if self.include_dev:
+        if self.settings.include_dev:
             self.dev_tokens = dev_data['token']
 
-        if self.include_lemma:
+        if self.settings.include_lemma:
             self.train_lemmas = train_data['lemma']
             self.known_lemmas = set(self.train_lemmas)
-            if self.include_dev:
+            if self.settings.include_dev:
                 self.dev_lemmas = dev_data['lemma']
-            if self.include_test:
+            if self.settings.include_test:
                 self.test_lemmas = test_data['lemma']
 
-        if self.include_pos:
+        if self.settings.include_pos:
             self.train_pos = train_data['pos']
-            if self.include_dev:
+            if self.settings.include_dev:
                 self.dev_pos = dev_data['pos']
-            if self.include_test:
+            if self.settings.include_test:
                 self.test_pos = test_data['pos']
 
-        if self.include_morph:
-            self.train_morph = train_data['morph']
-            if self.include_dev:
+        if self.settings.include_morph:
+            self.settings.train_morph = train_data['morph']
+            if self.settings.include_dev:
                 self.dev_morph = dev_data['morph']
-            if self.include_test:
+            if self.settings.include_test:
                 self.test_morph = test_data['morph']
 
         if embed_data:
@@ -327,32 +240,20 @@ class Tagger():
             #in that case:
             #self.embed_tokens = dict(embed_data['tokens'].items() + train_data['token'].items() )
 
-        self.preprocessor = Preprocessor(categorical=self.model == 'Keras')
-        self.preprocessor.fit(
+        self.preprocessor = Preprocessor().fit(
             tokens=self.train_tokens,
             lemmas=self.train_lemmas,
             pos=self.train_pos,
             morph=self.train_morph,
-            include_lemma=self.include_lemma,
-            include_morph=self.include_morph,
-            max_token_len=self.max_token_len,
-            max_lemma_len=self.max_lemma_len,
-            focus_repr=self.focus_repr,
-            min_lem_cnt=self.min_lem_cnt)
+            settings=self.settings)
+        self.settings = self.preprocessor.settings
 
-        self.max_token_len = self.preprocessor.max_token_len
-        self.max_lemma_len = self.preprocessor.max_lemma_len
-
-        self.pretrainer = Pretrainer(nb_left_tokens=self.nb_left_tokens,
-                                     nb_right_tokens=self.nb_right_tokens,
-                                     size=self.nb_embedding_dims,
-                                     minimum_count=self.min_token_freq_emb,
-                                     nb_workers=nb_pretrainer_workers)
-
+        self.pretrainer = Pretrainer(self.settings)
         if self.embed_tokens is not None:
             self.pretrainer.fit(tokens=self.embed_tokens)
         else:
             self.pretrainer.fit(tokens=self.train_tokens)
+        self.settings = self.pretrainer.settings
 
         train_transformed = self.preprocessor.transform(
             tokens=self.train_tokens,
@@ -360,14 +261,14 @@ class Tagger():
             pos=self.train_pos,
             morph=self.train_morph)
 
-        if self.include_dev:
+        if self.settings.include_dev:
             dev_transformed = self.preprocessor.transform(
                 tokens=self.dev_tokens,
                 lemmas=self.dev_lemmas,
                 pos=self.dev_pos,
                 morph=self.dev_morph)
 
-        if self.include_test:
+        if self.settings.include_test:
             test_transformed = self.preprocessor.transform(
                 tokens=self.test_tokens,
                 lemmas=self.test_lemmas,
@@ -375,40 +276,42 @@ class Tagger():
                 morph=self.test_morph)
 
         self.train_X_focus = train_transformed['X_focus']
-        if self.include_dev:
+        if self.settings.include_dev:
             self.dev_X_focus = dev_transformed['X_focus']
-        if self.include_test:
+        if self.settings.include_test:
             self.test_X_focus = test_transformed['X_focus']
 
-        if self.include_lemma:
+        if self.settings.include_lemma:
             self.train_X_lemma = train_transformed['X_lemma']
-            if self.include_dev:
+            if self.settings.include_dev:
                 self.dev_X_lemma = dev_transformed['X_lemma']
-            if self.include_test:
+            if self.settings.include_test:
                 self.test_X_lemma = test_transformed['X_lemma']
 
-        if self.include_pos:
+        if self.settings.include_pos:
             self.train_X_pos = train_transformed['X_pos']
-            if self.include_dev:
+            if self.settings.include_dev:
                 self.dev_X_pos = dev_transformed['X_pos']
-            if self.include_test:
+            if self.settings.include_test:
                 self.test_X_pos = test_transformed['X_pos']
 
-        if self.include_morph:
+        if self.settings.include_morph:
             self.train_X_morph = train_transformed['X_morph']
-            if self.include_dev:
+            if self.settings.include_dev:
                 self.dev_X_morph = dev_transformed['X_morph']
-            if self.include_test:
+            if self.settings.include_test:
                 self.test_X_morph = test_transformed['X_morph']
 
         self.train_contexts = self.pretrainer.transform(
             tokens=self.train_tokens)
-        if self.include_dev:
+        if self.settings.include_dev:
             self.dev_contexts = self.pretrainer.transform(
                 tokens=self.dev_tokens)
-        if self.include_test:
+        if self.settings.include_test:
             self.test_contexts = self.pretrainer.transform(
                 tokens=self.test_tokens)
+
+        # remove unused items from memory:
         try:
             del train_transformed
         except:
@@ -423,69 +326,17 @@ class Tagger():
             pass
 
         print('Building model...')
-        nb_tags = None
-        try:
-            nb_tags = len(self.preprocessor.pos_encoder.classes_)
-        except AttributeError:
-            pass
-        nb_morph_cats = None
-        try:
-            nb_morph_cats = self.preprocessor.nb_morph_cats
-        except AttributeError:
-            pass
-        max_token_len, token_char_dict = None, None
-        try:
-            max_token_len = self.preprocessor.max_token_len
-            token_char_dict = self.preprocessor.token_char_lookup
-        except AttributeError:
-            pass
-        max_lemma_len, lemma_char_dict = None, None
-        try:
-            max_lemma_len = self.preprocessor.max_lemma_len
-            lemma_char_dict = self.preprocessor.lemma_char_lookup
-        except AttributeError:
-            pass
-        nb_lemmas = None
-        try:
-            nb_lemmas = len(self.preprocessor.lemma_encoder.classes_)
-        except AttributeError:
-            pass
-
-        self.model = MODELS[self.model](
-            token_len=max_token_len,
-            token_char_vector_dict=token_char_dict,
-            lemma_len=max_lemma_len,
-            nb_tags=nb_tags,
-            nb_morph_cats=nb_morph_cats,
-            lemma_char_vector_dict=lemma_char_dict,
-            nb_encoding_layers=self.nb_encoding_layers,
-            nb_dense_dims=self.nb_dense_dims,
-            nb_embedding_dims=self.nb_embedding_dims,
-            nb_train_tokens=len(self.pretrainer.train_token_vocab),
-            nb_context_tokens=self.nb_context_tokens,
-            pretrained_embeddings=self.pretrainer.pretrained_embeddings,
-            include_token=self.include_token,
-            include_context=self.include_context,
-            include_lemma=self.include_lemma,
-            include_pos=self.include_pos,
-            include_morph=self.include_morph,
-            nb_filters=self.nb_filters,
-            filter_length=self.filter_length,
-            focus_repr=self.focus_repr,
-            dropout_level=self.dropout_level,
-            nb_lemmas=nb_lemmas,
-            char_embed_dim=self.char_embed_dim,
-            batch_size=self.batch_size)
-
+        self.model = MODELS[self.settings.backend](settings=self.settings)
         self.model.print_summary()
+        self.settings = self.model.settings
 
         self.setup = True
         self.save()
 
     def train(self, nb_epochs=None):
         if nb_epochs:
-            self.nb_epochs = nb_epochs
-        for i in range(self.nb_epochs):
+            self.settings.nb_epochs = nb_epochs
+        for i in range(self.settings.nb_epochs):
             scores = self.epoch()
         return scores
 
@@ -513,9 +364,9 @@ class Tagger():
 
         # get test predictions:
         test_in = {}
-        if self.include_token:
+        if self.settings.include_token:
             test_in['focus_in'] = self.test_X_focus
-        if self.include_context:
+        if self.settings.include_context:
             test_in['context_in'] = self.test_contexts
 
         test_preds = self.model.predict(test_in, batch_size=self.test_batch_size)
@@ -523,10 +374,10 @@ class Tagger():
         if isinstance(test_preds, np.ndarray):
             test_preds = [test_preds]
 
-        if self.include_lemma:
+        if self.settings.include_lemma:
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                 predictions=test_preds['lemma_out'])
-            if self.postcorrect:
+            if self.settings.postcorrect:
                 for i in range(len(pred_lemmas)):
                     if pred_lemmas[i] not in self.known_lemmas:
                         pred_lemmas[i] = min(
@@ -540,7 +391,7 @@ class Tagger():
                 known_tokens=self.preprocessor.known_tokens,
                 print_scores=False)
 
-        if self.include_pos:
+        if self.settings.include_pos:
 
             pred_pos = self.preprocessor.inverse_transform_pos(
                 predictions=test_preds['pos_out'])
@@ -551,7 +402,7 @@ class Tagger():
                 known_tokens=self.preprocessor.known_tokens,
                 print_scores=False)
 
-        if self.include_morph:
+        if self.settings.include_morph:
             pred_morph = self.preprocessor.inverse_transform_morph(
                 predictions=test_preds['morph_out'],
                 threshold=multilabel_threshold)
@@ -574,14 +425,14 @@ class Tagger():
 
     def save(self):
         # save architecture:
-        self.model.save(self.model_dir)
+        self.model.save(self.settings.model_dir)
 
         # save preprocessor:
-        self.preprocessor.save(self.model_dir)
-        self.pretrainer.save(self.model_dir)
+        self.preprocessor.save(self.settings.model_dir)
+        self.pretrainer.save(self.settings.model_dir)
 
-        if self.include_lemma:
-            lemmas_path = os.sep.join((self.model_dir, 'known_lemmas.txt'))
+        if self.settings.include_lemma:
+            lemmas_path = os.sep.join((self.settings.model_dir, 'known_lemmas.txt'))
             with open(lemmas_path, 'w') as f:
                 f.write('\n'.join(sorted(self.known_lemmas)))
 
@@ -589,38 +440,10 @@ class Tagger():
 
     def save_params(self):
         """ Write the params to self.model_dir """
-        with open(os.sep.join((self.model_dir, 'config.txt')), 'w') as F:
-            F.write('# Parameter file\n\n[global]\n')
-            F.write('nb_encoding_layers = '+str(self.nb_encoding_layers)+'\n')
-            F.write('nb_dense_dims = '+str(self.nb_dense_dims)+'\n')
-            F.write('batch_size = '+str(self.batch_size)+'\n')
-            F.write('nb_left_tokens = '+str(self.nb_left_tokens)+'\n')
-            F.write('nb_right_tokens = '+str(self.nb_right_tokens)+'\n')
-            F.write('nb_embedding_dims = '+str(self.nb_embedding_dims)+'\n')
-            F.write('model_dir = '+str(self.model_dir)+'\n')
-            F.write('postcorrect = '+str(self.postcorrect)+'\n')
-            F.write('nb_filters = '+str(self.nb_filters)+'\n')
-            F.write('filter_length = '+str(self.filter_length)+'\n')
-            F.write('focus_repr = '+str(self.focus_repr)+'\n')
-            F.write('dropout_level = '+str(self.dropout_level)+'\n')
-            F.write('include_token = '+str(self.include_context)+'\n')
-            F.write('include_context = '+str(self.include_context)+'\n')
-            F.write('include_lemma = '+str(self.include_lemma)+'\n')
-            F.write('include_pos = '+str(self.include_pos)+'\n')
-            F.write('include_morph = '+str(self.include_morph)+'\n')
-            F.write('include_dev = '+str(self.include_dev)+'\n')
-            F.write('include_test = '+str(self.include_test)+'\n')
-            F.write('nb_epochs = '+str(self.nb_epochs)+'\n')
-            F.write('halve_lr_at = '+str(self.halve_lr_at)+'\n')
-            F.write('max_token_len = '+str(self.max_token_len)+'\n')
-            F.write('max_lemma_len = '+str(self.max_lemma_len)+'\n')
-            F.write('min_token_freq_emb = '+str(self.min_token_freq_emb)+'\n')
-            F.write('min_lem_cnt = '+str(self.min_lem_cnt)+'\n')
-            F.write('char_embed_dim = '+str(self.char_embed_dim)+'\n')
-            F.write('test_batch_size = '+str(self.test_batch_size)+'\n')
-            F.write('model = '+str(self.model.CONFIG_KEY)+'\n')
-            if hasattr(self, "curr_nb_epochs"):
-                F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
+        with open(os.sep.join((self.settings.model_dir, 'config.txt')), 'w') as f:
+            if hasattr(self, 'curr_nb_epochs'):
+                self.settings.curr_nb_epochs = self.curr_nb_epochs
+            f.write(json.dumps(self.settings))
 
     def epoch(self, autosave=True, eval_test=False):
         if not self.setup:
@@ -631,22 +454,22 @@ class Tagger():
         self.curr_nb_epochs += 1
         print("-> Epoch ", self.curr_nb_epochs, "...")
 
-        if self.curr_nb_epochs and self.halve_lr_at:
+        if self.curr_nb_epochs and self.settings.halve_lr_at:
             # update learning rate at specific points:
-            if self.curr_nb_epochs % self.halve_lr_at == 0:
+            if self.curr_nb_epochs % self.settings.halve_lr_at == 0:
                 self.model.adjust_lr()
 
         # get inputs and outputs straight:
         train_in, train_out = {}, {}
-        if self.include_token:
+        if self.settings.include_token:
             train_in['focus_in'] = self.train_X_focus
-        if self.include_context:
+        if self.settings.include_context:
             train_in['context_in'] = self.train_contexts
-        if self.include_lemma:
+        if self.settings.include_lemma:
             train_out['lemma_out'] = self.train_X_lemma
-        if self.include_pos:
+        if self.settings.include_pos:
             train_out['pos_out'] = self.train_X_pos
-        if self.include_morph:
+        if self.settings.include_morph:
             train_out['morph_out'] = self.train_X_morph
 
         self.model.epoch(train_in, train_out)
@@ -804,9 +627,9 @@ class Tagger():
         X_context = self.pretrainer.transform(tokens=tokens)
 
         new_in = {}
-        if self.include_token:
+        if self.settings.include_token:
             new_in['focus_in'] = X_focus
-        if self.include_context:
+        if self.settings.include_context:
             new_in['context_in'] = X_context
 
         preds = self.model.predict(new_in)
@@ -814,11 +637,11 @@ class Tagger():
             preds = [preds]
 
         annotation_dict = {'tokens': tokens}
-        if self.include_lemma:
+        if self.settings.include_lemma:
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                 predictions=preds['lemma_out'])
             annotation_dict['lemmas'] = pred_lemmas
-            if self.postcorrect:
+            if self.settings.postcorrect:
                 for i in range(len(pred_lemmas)):
                     if pred_lemmas[i] not in self.known_lemmas:
                         pred_lemmas[i] = min(
@@ -826,12 +649,12 @@ class Tagger():
                             key=lambda x: editdistance.eval(x, pred_lemmas[i]))
                 annotation_dict['postcorrect_lemmas'] = pred_lemmas
 
-        if self.include_pos:
+        if self.settings.include_pos:
             pred_pos = self.preprocessor.inverse_transform_pos(
                 predictions=preds['pos_out'])
             annotation_dict['pos'] = pred_pos
 
-        if self.include_morph:
+        if self.settings.include_morph:
             pred_morph = self.preprocessor.inverse_transform_morph(
                 predictions=preds['morph_out'])
             annotation_dict['morph'] = pred_morph

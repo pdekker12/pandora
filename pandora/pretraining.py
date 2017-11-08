@@ -66,12 +66,8 @@ class Pretrainer:
     * can be used to shingle a list of tokens into
       the context vectors for the model.
     """
-    DEFAULT_NB_WORKERS = 10
 
-    def __init__(self, nb_left_tokens=None, nb_right_tokens=None,
-                 sentence_len=100, window=5,
-                 minimum_count=2, size=300, nb_mfi=500,
-                 nb_workers=10, nb_negative=5):
+    def __init__(self, settings):
         """
         Constructor.
 
@@ -99,14 +95,8 @@ class Pretrainer:
             Nb of negative samples to be drawn by the Gensim model.
 
         """
-        self.nb_left_tokens = nb_left_tokens
-        self.nb_right_tokens = nb_right_tokens
-        self.size = size
-        self.nb_mfi = nb_mfi
-        self.window = window
-        self.minimum_count = minimum_count
-        self.nb_workers = nb_workers or Pretrainer.DEFAULT_NB_WORKERS
-        self.nb_negative = nb_negative
+        self.settings = settings
+
 
     def fit(self, tokens, viz=False):
         """
@@ -122,17 +112,17 @@ class Pretrainer:
         """
         # get most frequent items for plotting:
         tokens = [t.lower() for t in tokens]
-        self.mfi = [t for t, _ in Counter(tokens).most_common(self.nb_mfi)]
+        self.mfi = [t for t, _ in Counter(tokens).most_common(self.settings.nb_mfi)]
 
         sentence_iterator = SentenceIterator(tokens=tokens)
         # train embeddings:
         self.w2v_model = Word2Vec(
             sentence_iterator,
-            window=self.window,
-            min_count=self.minimum_count,
-            size=self.size,
-            workers=self.nb_workers,
-            negative=self.nb_negative)
+            window=self.settings.window,
+            min_count=self.settings.min_tok_cnt,
+            size=self.settings.nb_embedding_dims,
+            workers=self.settings.nb_workers,
+            negative=self.settings.nb_negative)
         self.w2v_model.init_sims(replace=True)
 
         if viz:
@@ -143,13 +133,15 @@ class Pretrainer:
         # which occur at least minimum_count times:
         self.token_idx = {'<UNK>': 0}
         for k, v in Counter(tokens).items():
-            if v >= self.minimum_count:
+            if v >= self.settings.min_tok_cnt:
                 self.token_idx[k] = len(self.token_idx)
 
         # create an ordered vocab:
         self.train_token_vocab = [k for k, v in sorted(self.token_idx.items(),
                                                        key=itemgetter(1))]
+        self.settings.nb_train_tokens = len(self.train_token_vocab)
         self.pretrained_embeddings = self.get_weights(self.train_token_vocab)
+
         del self.w2v_model
         return self
 
@@ -168,7 +160,7 @@ class Pretrainer:
         (len(vocab), dimensionality).
 
         """
-        unk = np.zeros(self.size)
+        unk = np.zeros(self.settings.nb_embedding_dims)
         weights = []
         for w in vocab:
             try:
@@ -198,27 +190,27 @@ class Pretrainer:
             ints = []
             # vectorize left context:
             left_context_tokens = [tokens[curr_idx-(t+1)]
-                                   for t in range(self.nb_left_tokens)
+                                   for t in range(self.settings.nb_left_tokens)
                                    if curr_idx-(t+1) >= 0][::-1]
 
             idxs = []
             if left_context_tokens:
                 idxs = [self.token_idx[t] if t in self.token_idx else 0
                         for t in left_context_tokens]
-            while len(idxs) < self.nb_left_tokens:
+            while len(idxs) < self.settings.nb_left_tokens:
                 idxs = [0] + idxs
             ints.extend(idxs)
 
             # vectorize right context
             right_context_tokens = [tokens[curr_idx+(t+1)]
-                                    for t in range(self.nb_right_tokens)
+                                    for t in range(self.settings.nb_right_tokens)
                                     if curr_idx+(t+1) < len(tokens)]
 
             idxs = []
             if right_context_tokens:
                 idxs = [self.token_idx[t] if t in self.token_idx else 0
                         for t in right_context_tokens]
-            while len(idxs) < self.nb_right_tokens:
+            while len(idxs) < self.settings.nb_right_tokens:
                 idxs.append(0)
             ints.extend(idxs)
 
@@ -237,7 +229,7 @@ class Pretrainer:
         nb_clusters : str (default = 8)
             Number of clusters to color as a reading aid.
         """
-        X = np.asarray([self.w2v_model[w] for w in self.mfi
+        X = np.asarray([self.w2v_model[w] for w in self.settings.mfi
                         if w in self.w2v_model], dtype='float32')
         tsne = TSNE(n_components=2)
         coor = tsne.fit_transform(X)

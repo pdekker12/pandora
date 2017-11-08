@@ -319,26 +319,20 @@ class Preprocessor(object):
     level representations of input and output labels.
     """
 
-    def __init__(self, categorical=False):
-        self.categorical = categorical
-        self.max_lemma_len = None
-        self.max_token_len = None
-        self.focus_repr = None
+    def __init__(self):
+        self.settings = None
+
         self.token_char_vocab, self.token_char_lookup = None, None
-        self.known_tokens = None
-        self.include_lemma, self.known_lemmas = None, None
+        self.known_tokens, self.known_lemmas = None, None
         self.lemma_char_vocab, self.lemma_char_lookup = None, None
-        self.min_lem_cnt, self.lemma_encoder = None, None
+
+        self.lemma_encoder = None
         self.pos_encoder = None
         self.morph_encoder = None
         self.nb_morph_cats, self.morph_idxs = None, None
-        self.include_morph = None
-        self.include_pos = None
         self.lemma_char_dict = None
 
-    def fit(self, tokens, lemmas, pos, morph, include_lemma,
-            include_morph, focus_repr, max_token_len=None,
-            min_lem_cnt=1, max_lemma_len=None):
+    def fit(self, tokens, lemmas, pos, morph, settings):
 
         """Fits the prepocessor on annotated materials.
            * Although tokens, lemmas and pos are optional,
@@ -358,83 +352,60 @@ class Preprocessor(object):
             A list of part-of-speech tags.
         morph : list of str (optional)
             A list of morphological tags.
-        include_lemma : str ('generate' or 'label')
-            Indicates whether lemmas will be
-            obtained through classification ('label')
-            or character-level generation ('generate')
-        include_morph : str ('label' or 'multilabel')
-            Indicate whether the morphological prediction
-            uses hardcare single-label classification,
-            or a subtag level multilabel approach.
-        focus_repr : str (one of: 'recurrent', 'convolutional')
-            Which representation model will be used:
-            concolutional filters ('convolutional') or
-            a bidirectional LSTM ('recurrent').
-        max_token_len : int
-            The length (in characters) to which all tokens
-            will be uniformized (through padding and cutting).
-            (Note that the maximum length of the lemmas is
-            automatically inferred from the maximum lemma
-            length observed.)
-        min_lem_cnt : int (default: 1)
-            The minimum number of attestions a lemma label
-            have to be assigned its own classification label
-            in the case of `include_lemma` = 'label'.
+        settings : dict-like
 
         Returns
         ===========
             Itself.
         """
-        if max_token_len:
-            self.max_token_len = max_token_len
-        else:
-            self.max_token_len = len(max(tokens, key=len)) + 1
+        self.settings = settings
+        self.categorical = self.settings.backend == 'Keras'
 
-        self.focus_repr = focus_repr
+        if not self.settings.max_token_len:
+            self.settings.max_token_len = len(max(tokens, key=len)) + 1
 
         # fit focus tokens:
         self.token_char_vocab, self.token_char_lookup = \
             index_characters(tokens)
         self.known_tokens = set(tokens)
+        self.settings.nb_token_chars = len(self.token_char_lookup)
 
         # fit lemmas:
         if lemmas:
-            self.include_lemma = include_lemma
             self.known_lemmas = set(lemmas)
 
-            if max_lemma_len:
-                self.max_lemma_len = max_lemma_len
-            else:
+            if not self.settings.max_lemma_len:
                 self.max_lemma_len = len(max(lemmas, key=len)) + 1
 
-            if include_lemma == 'generate':
+            if self.settings.include_lemma == 'generate':
                 self.lemma_char_vocab, self.lemma_char_lookup = \
                     index_characters(lemmas)
-            elif include_lemma == 'label':
-                self.min_lem_cnt = min_lem_cnt
+                self.settings.nb_lemma_chars = len(self.lemma_char_vocab)
+            elif self.settings.include_lemma == 'label':
                 cnt = Counter(lemmas)
                 trunc_lems = \
-                    [k for k, v in cnt.items() if v >= self.min_lem_cnt]
+                    [k for k, v in cnt.items() if v >= self.settings.min_lem_cnt]
                 self.lemma_encoder = LabelEncoder()
                 self.lemma_encoder.fit(trunc_lems + ['<UNK>'])
+                self.settings.nb_lemmas = len(self.lemma_encoder.classes_)
 
         # fit pos labels:
-        if pos:
-            self.include_pos = True
+        if self.settings.include_pos and pos:
             self.pos_encoder = LabelEncoder()
             self.pos_encoder.fit(pos + ['<UNK>'])
+            self.settings.nb_tags = len(self.pos_encoder.classes_)
 
-        if morph:
-            self.include_morph = include_morph
-            if self.include_morph == 'label':
+        if self.settings.include_morph and morph:
+            if self.settings.include_morph == 'label':
                 self.morph_encoder = LabelEncoder()
                 self.morph_encoder.fit(morph + ['<UNK>'])
-            elif self.include_morph == 'multilabel':
+            elif self.settings.include_morph == 'multilabel':
                 # fit morph analysis:
                 morph_dicts = parse_morphs(morph)
                 self.morph_encoder = DictVectorizer(sparse=False)
                 self.morph_encoder.fit(morph_dicts)
             self.deduct_secondary_informations_from_morph()
+            self.settings.nb_morph_cats = len(self.morph_encoder.classes_)
 
         return self
 
@@ -485,26 +456,25 @@ class Preprocessor(object):
                               'X_pos' : pos representation,
                               'X_morph' : pos representation}
         """
-
         # vectorize focus tokens:
         X_focus = vectorize_tokens(
             tokens=tokens,
             token_char_lookup=self.token_char_lookup,
-            max_len=self.max_token_len,
-            focus_repr=self.focus_repr)
+            max_len=self.settings.max_token_len,
+            focus_repr=self.settings.focus_repr)
 
         returnables = {'X_focus': X_focus}
 
-        if lemmas and self.include_lemma:
+        if lemmas and self.settings.include_lemma:
             # vectorize lemmas:
-            if self.include_lemma == 'generate':
+            if self.settings.include_lemma == 'generate':
                 X_lemma = vectorize_lemmas(
                     lemmas=lemmas,
                     char_vector_dict=self.lemma_char_lookup,
                     max_len=self.max_lemma_len,
                     categorical=self.categorical)
 
-            elif self.include_lemma == 'label':
+            elif self.settings.include_lemma == 'label':
                 X_lemma = [l if l in self.lemma_encoder.classes_ else '<UNK>'
                            for l in lemmas]
                 X_lemma = self.lemma_encoder.transform(X_lemma)
@@ -529,7 +499,7 @@ class Preprocessor(object):
 
         if morph:
             # vectorize morph:
-            if self.include_morph == 'label':
+            if self.settings.include_morph == 'label':
                 X_morph = [m if m in self.morph_encoder.classes_ else '<UNK>'
                            for m in morph]
                 X_morph = self.morph_encoder.transform(X_morph)
@@ -540,7 +510,7 @@ class Preprocessor(object):
 
                 returnables['X_morph'] = X_morph
 
-            elif self.include_morph == 'multilabel':
+            elif self.settings.include_morph == 'multilabel':
                 morph_dicts = parse_morphs(morph)
                 X_morph = self.morph_encoder.transform(morph_dicts)
                 returnables['X_morph'] = X_morph
@@ -583,7 +553,7 @@ class Preprocessor(object):
         """
 
         pred_lemmas = []
-        if self.include_lemma == 'generate':
+        if self.settings.include_lemma == 'generate':
             for pred in predictions:
                 pred_lem = ''
                 for positions in pred:
@@ -600,7 +570,7 @@ class Preprocessor(object):
                         pred_lem += c  # add character
                 pred_lemmas.append(pred_lem)
 
-        elif self.include_lemma == 'label':
+        elif self.settings.include_lemma == 'label':
             predictions = np.argmax(predictions, axis=1)
             pred_lemmas = self.lemma_encoder.inverse_transform(predictions)
 
@@ -639,10 +609,10 @@ class Preprocessor(object):
         ===========
             The morphological predictions as a list of strings.
         """
-        if self.include_morph == 'label':
+        if self.settings.include_morph == 'label':
             predictions = np.argmax(predictions, axis=1)
             return self.morph_encoder.inverse_transform(predictions)
-        elif self.include_morph == 'multilabel':
+        elif self.settings.include_morph == 'multilabel':
             morphs = []
             for pred in predictions:
                 m = []
@@ -666,7 +636,7 @@ class Preprocessor(object):
             self.pos_encoder.save(
                 p=os.sep.join((model_dir, 'pos_enc.txt')))
         if self.morph_encoder:
-            if self.include_morph == "label":
+            if self.settings.include_morph == "label":
                 self.morph_encoder.save(
                     p=os.sep.join((model_dir, 'morph_enc.txt')))
             else:
@@ -678,7 +648,7 @@ class Preprocessor(object):
             with open(path, 'w') as f:
                 for idx, char in enumerate(self.token_char_vocab):
                     f.write('\t'.join((char, str(idx)))+'\n')
-        if self.include_lemma == 'generate':
+        if self.settings.include_lemma == 'generate':
             path = os.sep.join((model_dir, 'lemma_char_lookup.txt'))
             with open(path, 'w') as f:
                 for c, idx in self.lemma_char_lookup.items():

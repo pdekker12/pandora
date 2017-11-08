@@ -37,7 +37,7 @@ def train_func(config, train, dev=None, test=None, load=False, verbose=True, fir
     """
     tagger = Tagger.setup_from_disk(config, train, dev, test, verbose=True, load=load, **kwargs)
 
-    nb_epochs = tagger.nb_epochs
+    nb_epochs = tagger.settings.nb_epochs
 
     # Set up the logger
     logger_params = dict(
@@ -53,7 +53,7 @@ def train_func(config, train, dev=None, test=None, load=False, verbose=True, fir
     tagger.logger = Logger(**logger_params)
 
     for i in range(nb_epochs):
-        tagger.epoch(autosave=True, eval_test=tagger.include_test)
+        tagger.epoch(autosave=True, eval_test=tagger.settings.include_test)
 
     tagger.save()
     print('::: ended :::')
@@ -89,7 +89,7 @@ def cli_train():
     train_func(**vars(parser.parse_args()))
 
 
-tokenize = re.compile("\s")
+tokenize = re.compile('\s')
 
 
 def tag_dir(model, input_dir, output_dir, tokenized_input, string=None, **kwargs):
