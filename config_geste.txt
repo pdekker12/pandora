@@ -27,4 +27,5 @@ halve_lr_at = 75
 max_token_len = False
 max_lemma_len = False
 min_lem_cnt = 1 
-model = Keras 
+model = Keras
+lr = 0.01

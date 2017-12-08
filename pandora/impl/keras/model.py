@@ -14,6 +14,7 @@ from keras.layers.embeddings import Embedding
 from keras.models import model_from_json
 import keras.backend as K
 from keras.models import load_model
+from keras import optimizers
 
 from pandora.impl.base_model import BaseModel
 
@@ -33,7 +34,7 @@ class KerasModel(BaseModel):
                  include_token=True, include_context=True,
                  include_lemma=True, include_pos=True, include_morph=True,
                  nb_filters=100, filter_length=3, focus_repr='recurrent',
-                 dropout_level=0.15, build=True):
+                 dropout_level=0.15, build=True, lr=0.01):
         self.token_len = token_len
         self.token_char_vector_dict = token_char_vector_dict
         self.nb_encoding_layers = nb_encoding_layers
@@ -58,6 +59,7 @@ class KerasModel(BaseModel):
         self.dropout_level = dropout_level
         self.char_embed_dim = char_embed_dim
         self.batch_size = batch_size
+        self.lr = lr
 
         if build:
             self._build()
@@ -112,10 +114,11 @@ class KerasModel(BaseModel):
                 loss_dict['morph_out'] = 'binary_crossentropy'
 
         self.model = Model(inputs=inputs, outputs=outputs)
+        optimizer = optimizers.Adam(lr=self.lr)
         if self.focus_repr == 'convolutions':  # TODO: fix this?
-            self.model.compile(optimizer='Adam', loss=loss_dict)
+            self.model.compile(optimizer=optimizer, loss=loss_dict)
         else:
-            self.model.compile(optimizer='Adam', loss=loss_dict)
+            self.model.compile(optimizer=optimizer, loss=loss_dict)
 
     def _build_token_subnet(self):
         token_input = Input(shape=(self.token_len,),
@@ -314,7 +317,7 @@ class KerasModel(BaseModel):
     @staticmethod
     def load(model_dir,
              include_lemma=True, include_pos=True, include_morph=True,
-             batch_size=50):
+             batch_size=50, initial_lr=0.01):
         # load model and weights:
         with open(os.path.join(model_dir, 'model_architecture.json'), 'r') as f:
             model = model_from_json(f.read())
@@ -334,7 +337,8 @@ class KerasModel(BaseModel):
             elif include_morph == 'multilabel':
                 loss_dict['morph_out'] = 'binary_crossentropy'
 
-        model.compile(optimizer='Adam', loss=loss_dict)
+        model.compile(optimizer=optimizers.Adam(lr=initial_lr),
+                      loss=loss_dict)
         keras_model = KerasModel(include_lemma=include_lemma,
                                  include_pos=include_pos,
                                  include_morph=include_morph,

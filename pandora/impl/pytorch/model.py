@@ -43,7 +43,7 @@ class PyTorchModel(nn.Module, BaseModel):
                  include_token=True, include_context=True,
                  include_lemma=True, include_pos=True, include_morph=True,
                  nb_filters=100, filter_length=3, focus_repr='recurrent',
-                 batch_size=None, dropout_level=0.15):
+                 batch_size=None, dropout_level=0.15, lr=0.01):
         self.token_len = token_len  # not used
         self.token_char_vector_dict = token_char_vector_dict
         self.nb_encoding_layers = nb_encoding_layers
@@ -69,6 +69,7 @@ class PyTorchModel(nn.Module, BaseModel):
         self.char_embed_dim = char_embed_dim
         self.batch_size = batch_size
         self.joined_dim = 0
+        self.lr = lr
         if self.include_token:
             self.joined_dim = self.nb_dense_dims
         if self.include_context:
@@ -106,7 +107,7 @@ class PyTorchModel(nn.Module, BaseModel):
             self._build_morph_decoder()
             self._build_morph_loss()
 
-        self.optimizer = Optimizer(self.parameters(), 'Adam', lr=0.001)
+        self.optimizer = Optimizer(self.parameters(), 'Adam', lr=self.lr)
 
     def print_summary(self):
         # print model

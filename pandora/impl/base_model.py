@@ -68,6 +68,8 @@ class BaseModel(object):
         If False, a fresh model will be initialized. Else, `load`
         must be a string pointing to an existing model directory
         from which an existing model will be re-loaded.
+    lr : float
+        Initial learning rate
     """
     CONFIG_KEY = "base"
 

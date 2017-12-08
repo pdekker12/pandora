@@ -51,6 +51,7 @@ class Tagger():
                  max_lemma_len=None,
                  min_lem_cnt=1,
                  overwrite=None,
+                 lr=0.01,
                  model='Keras',
                  test_batch_size=None):
 
@@ -116,7 +117,7 @@ class Tagger():
         self.min_token_freq_emb = \
             int(param_dict.get('min_token_freq_emb', min_token_freq_emb))
         self.halve_lr_at = int(param_dict.get('halve_lr_at', halve_lr_at))
-
+        self.lr = float(param_dict.get('lr', lr))
         self.max_token_len = param_dict.get('max_token_len', max_token_len)
         if self.max_token_len is not None:
             self.max_token_len = int(self.max_token_len)
@@ -478,7 +479,8 @@ class Tagger():
             dropout_level=self.dropout_level,
             nb_lemmas=nb_lemmas,
             char_embed_dim=self.char_embed_dim,
-            batch_size=self.batch_size)
+            batch_size=self.batch_size,
+            lr=self.lr)
 
         self.model.print_summary()
 
@@ -544,7 +546,6 @@ class Tagger():
                 print_scores=False)
 
         if self.include_pos:
-
             pred_pos = self.preprocessor.inverse_transform_pos(
                 predictions=test_preds['pos_out'])
             score_dict['test_pos'] = evaluation.single_label_accuracies(
