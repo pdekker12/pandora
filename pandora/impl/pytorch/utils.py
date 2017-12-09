@@ -32,10 +32,10 @@ def init_rnn(rnn):
 
     else:
         for layer in range(rnn.num_layers):
-            init.xavier_uniform(getattr(rnn, f'weight_hh_l{layer}'))
-            init.xavier_uniform(getattr(rnn, f'weight_ih_l{layer}'))
-            init.constant(getattr(rnn, f'bias_hh_l{layer}'), 0.)
-            init.constant(getattr(rnn, f'bias_ih_l{layer}'), 0.)
+            init.xavier_uniform(getattr(rnn, 'weight_hh_l{layer}'.format(layer=layer)))
+            init.xavier_uniform(getattr(rnn, 'weight_ih_l{layer}'.format(layer=layer)))
+            init.constant(getattr(rnn, 'bias_hh_l{layer}'.format(layer=layer)), 0.)
+            init.constant(getattr(rnn, 'bias_ih_l{layer}'.format(layer=layer)), 0.)
 
 
 def init_conv(conv):
@@ -64,7 +64,9 @@ def multiple_index_select(t, index):
     # check dimensions
     for dim, (tdim, indexdim) in enumerate(zip(t.size(), index.size())):
         if tdim != indexdim:
-            raise ValueError(f"Mismatch {dim}, {tdim} != {indexdim}")
+            raise ValueError("Mismatch {dim}, {tdim} != {indexdim}".format(
+                dim=dim, tdim=tdim, indexdim=indexdim
+            ))
     offset = (torch.arange(0, index.size(0)) * index.size(1)).long()
     if t.is_cuda:
         offset = offset.cuda()
