@@ -252,7 +252,7 @@ class Tagger():
                 print("restart from epoch " + str(tagger.curr_nb_epochs) + "...")
             tagger.setup = True
         else:
-            tagger = Tagger(**params)
+            tagger = Tagger(**{k: v for k, v in params.items() if k not in ["pretrainer_nb_workers"]})
             tagger.setup_to_train(
                 nb_pretrainer_workers=kwargs.get("pretrainer_nb_workers", Pretrainer.DEFAULT_NB_WORKERS),
                 **data_sets
