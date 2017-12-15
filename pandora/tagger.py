@@ -143,7 +143,6 @@ class Tagger():
             os.mkdir(model_dir)
 
         if load:
-            print(load)
             self.load()
 
     @staticmethod
@@ -369,7 +368,6 @@ class Tagger():
 
         self.max_token_len = self.preprocessor.max_token_len
         self.max_lemma_len = self.preprocessor.max_lemma_len
-        print(nb_pretrainer_workers)
         self.pretrainer = Pretrainer(nb_left_tokens=self.nb_left_tokens,
                                      nb_right_tokens=self.nb_right_tokens,
                                      size=self.nb_embedding_dims,
