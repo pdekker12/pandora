@@ -23,4 +23,5 @@ class PandoraLabelEncoder(LabelEncoder):
             f.write('\n'.join(self.classes_))
 
     def load(self, p):
-        self.classes_ = np.array([l.strip() for l in open(p, 'r')])
+        with open(p, 'r') as f:
+            self.classes_ = np.array([l.strip() for l in f.readlines()])

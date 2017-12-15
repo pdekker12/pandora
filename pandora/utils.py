@@ -162,56 +162,58 @@ def load_annotated_file(filepath='text.txt', format='tab',
     if include_morph:
         instances['morph'] = []
     if format == 'conll':
-        for line in codecs.open(filepath, 'r', 'utf8'):
-            line = line.strip()
+        with codecs.open(filepath, 'r', 'utf8') as f:
+            for line in f.readlines():
+                line = line.strip()
 
-            if line:
-                try:
-                    idx, tok, _, lem, _, pos, morph = \
-                        line.split()[:7]
-                    print(idx, tok, lem, pos)
-                    if include_lemma:
-                        lem = lem.lower().strip().replace(' ', '')
-                    tok = tok.strip().replace('~', '').replace(' ', '')
-                    instances['token'].append(tok)
-                    if include_lemma:
-                        instances['lemma'].append(lem)
-                    if include_pos:
-                        instances['pos'].append(pos)
-                    if include_morph:
-                        instances['morph'].append(morph)
-                except ValueError:
-                    pass
-            if nb_instances:
-                if len(instances) >= nb_instances:
-                    break
+                if line:
+                    try:
+                        idx, tok, _, lem, _, pos, morph = \
+                            line.split()[:7]
+                        print(idx, tok, lem, pos)
+                        if include_lemma:
+                            lem = lem.lower().strip().replace(' ', '')
+                        tok = tok.strip().replace('~', '').replace(' ', '')
+                        instances['token'].append(tok)
+                        if include_lemma:
+                            instances['lemma'].append(lem)
+                        if include_pos:
+                            instances['pos'].append(pos)
+                        if include_morph:
+                            instances['morph'].append(morph)
+                    except ValueError:
+                        pass
+                if nb_instances:
+                    if len(instances) >= nb_instances:
+                        break
 
     elif format == 'tab':
-        for line in codecs.open(filepath, 'r', 'utf8'):
-            line = line.strip()
-            if line and not line[0] == '@':
-                try:
-                    comps = line.split()
-                    tok = comps[0]
-                    if include_lemma:
-                        lem = comps[1].lower().strip()
-                    if include_pos:
-                        pos = comps[2]
-                    if include_morph:
-                        morph = '|'.join(comps[3].split('|'))
-                    tok = tok.strip().replace('~', '').replace(' ', '')
-                    instances['token'].append(tok)
-                    if include_lemma:
-                        instances['lemma'].append(lem)
-                    if include_pos:
-                        instances['pos'].append(pos)
-                    if include_morph:
-                        instances['morph'].append(morph)
-                except:
-                    print(filepath, ':', line)
-            if nb_instances:
-                if len(instances['token']) >= nb_instances:
-                    break
+        with codecs.open(filepath, 'r', 'utf8') as f:
+            for line in f.readlines():
+                line = line.strip()
+                if line and not line[0] == '@':
+                    try:
+                        comps = line.split()
+                        tok = comps[0]
+                        if include_lemma:
+                            lem = comps[1].lower().strip()
+                        if include_pos:
+                            pos = comps[2]
+                        if include_morph:
+                            morph = '|'.join(comps[3].split('|'))
+                        tok = tok.strip().replace('~', '').replace(' ', '')
+                        instances['token'].append(tok)
+                        if include_lemma:
+                            instances['lemma'].append(lem)
+                        if include_pos:
+                            instances['pos'].append(pos)
+                        if include_morph:
+                            instances['morph'].append(morph)
+                    except:
+                        print(filepath, ':', line)
+                if nb_instances:
+                    if len(instances['token']) >= nb_instances:
+                        break
 
     else:
         raise NotImplementedError('Unsupported file format: must be\

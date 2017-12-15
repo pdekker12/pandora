@@ -51,12 +51,12 @@ class TestConfigLoader(TestCase):
     def test_load_after_save(self):
         """ Ensure param are correctly saved """
         tagger = Tagger.setup_from_disk(
-            config_path="./tests/test_configs/config_chrestien.txt", train_data=TRAIN, dev_data=DEV, test_data=TEST,
-            pretrainer_nb_workers=2
+            config_path="./tests/test_configs/config_chrestien.txt", train_data=TRAIN, dev_data=DEV, test_data=TEST
         )
         tagger.include_pos = False
         tagger.curr_nb_epochs = 10
         tagger.save_params()
+        self.assertEqual(tagger.pretrainer.nb_workers, 1, "Pretrainer Workers should be correctly loaded")
         del tagger
 
         tagger = Tagger(config_path="./fake_model/config.txt")
