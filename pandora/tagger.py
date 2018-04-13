@@ -53,7 +53,9 @@ class Tagger():
                  overwrite=None,
                  lr=0.01,
                  model='Keras',
-                 test_batch_size=None):
+                 test_batch_size=None,
+                 col_pos=None,
+                 col_lemma=None):
 
         # initialize:
         self.setup = False
@@ -169,6 +171,10 @@ class Tagger():
         params = utils.get_param_dict(config_path)
         params['config_path'] = config_path
         params.update({k: v for k, v in kwargs.items() if v is not None and k not in ["pretrainer_nb_workers"]})
+        if "col_pos" not in params:
+            params["col_pos"] = None
+        if "col_lemma" not in params:
+            params["col_lemma"] = None
 
         if verbose:
             print("::: Loaded Config :::")
@@ -178,11 +184,13 @@ class Tagger():
         train_data = utils.load_annotated_dir(
             directory=train_data,
             format='tab',
-            extension='.tab',
+            extension='.tsv',
             include_pos=params['include_pos'],
             include_lemma=params['include_lemma'],
             include_morph=params['include_morph'],
-            nb_instances=None
+            nb_instances=None,
+            col_pos = int(params["col_pos"]) if params["col_pos"] is not None else None,
+            col_lemma = int(params["col_lemma"]) if params["col_lemma"] is not None else None
         )
 
         if not len(train_data.keys()) or \
@@ -197,11 +205,13 @@ class Tagger():
             dev_data = utils.load_annotated_dir(
                 directory=dev_data,
                 format='tab',
-                extension='.tab',
+                extension='.tsv',
                 include_pos=params['include_pos'],
                 include_lemma=params['include_lemma'],
                 include_morph=params['include_morph'],
-                nb_instances=None
+                nb_instances=None,
+                col_pos = int(params["col_pos"]) if params["col_pos"] is not None else None,
+            col_lemma = int(params["col_lemma"]) if params["col_lemma"] is not None else None
             )
             if not len(dev_data.keys()) or \
                     not len(dev_data[list(dev_data.keys())[0]]):
@@ -212,11 +222,13 @@ class Tagger():
             test_data = utils.load_annotated_dir(
                 directory=test_data,
                 format='tab',
-                extension='.tab',
+                extension='.tsv',
                 include_pos=params['include_pos'],
                 include_lemma=params['include_lemma'],
                 include_morph=params['include_morph'],
-                nb_instances=None
+                nb_instances=None,
+                col_pos = int(params["col_pos"]) if params["col_pos"] is not None else None,
+            col_lemma = int(params["col_lemma"]) if params["col_lemma"] is not None else None
             )
             if not len(test_data.keys()) or \
                     not len(test_data[list(test_data.keys())[0]]):

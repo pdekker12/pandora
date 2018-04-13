@@ -16,7 +16,7 @@ PAD, EOS, BOS, UNK = '<PAD>', '<EOS>', '<BOS>', '<UNK>'
 def load_annotated_dir(directory='directory', format='tab',
                        extension='.txt', nb_instances=None,
                        include_lemma=True, include_morph=True,
-                       include_pos=True):
+                       include_pos=True, col_pos=None, col_lemma=None):
 
     """Loads annotated data files from a (single) directory.
 
@@ -78,7 +78,9 @@ def load_annotated_dir(directory='directory', format='tab',
                                         nb_instances=nb_instances,
                                         include_lemma=include_lemma,
                                         include_morph=include_morph,
-                                        include_pos=include_pos)
+                                        include_pos=include_pos,
+                                        col_pos = col_pos,
+                                        col_lemma= col_lemma)
 
             instances['token'].extend(insts['token'])
             if include_lemma:
@@ -93,7 +95,7 @@ def load_annotated_dir(directory='directory', format='tab',
 
 def load_annotated_file(filepath='text.txt', format='tab',
                         nb_instances=None, include_lemma=True,
-                        include_morph=True, include_pos=True):
+                        include_morph=True, include_pos=True, col_pos = None, col_lemma = None):
 
     """Loads the annotated instances from a single file.
 
@@ -187,6 +189,13 @@ def load_annotated_file(filepath='text.txt', format='tab',
                     break
 
     elif format == 'tab':
+        # Defaults
+        if col_pos is None:
+            col_pos = 2
+        if col_lemma is None:
+            col_lemma = 1
+        # Set from config file, if available
+        
         for line in codecs.open(filepath, 'r', 'utf8'):
             line = line.strip()
             if line and not line[0] == '@':
@@ -194,9 +203,9 @@ def load_annotated_file(filepath='text.txt', format='tab',
                     comps = line.split()
                     tok = comps[0]
                     if include_lemma:
-                        lem = comps[1].lower().strip()
+                        lem = comps[col_lemma].lower().strip()
                     if include_pos:
-                        pos = comps[2]
+                        pos = comps[col_pos]
                     if include_morph:
                         morph = '|'.join(comps[3].split('|'))
                     tok = tok.strip().replace('~', '').replace(' ', '')
