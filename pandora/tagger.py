@@ -184,7 +184,7 @@ class Tagger():
         train_data = utils.load_annotated_dir(
             directory=train_data,
             format='tab',
-            extension='.tsv',
+            extensions=('.tab','.tsv'),
             include_pos=params['include_pos'],
             include_lemma=params['include_lemma'],
             include_morph=params['include_morph'],
@@ -205,7 +205,7 @@ class Tagger():
             dev_data = utils.load_annotated_dir(
                 directory=dev_data,
                 format='tab',
-                extension='.tsv',
+                extensions=('.tab','.tsv'),
                 include_pos=params['include_pos'],
                 include_lemma=params['include_lemma'],
                 include_morph=params['include_morph'],
@@ -222,7 +222,7 @@ class Tagger():
             test_data = utils.load_annotated_dir(
                 directory=test_data,
                 format='tab',
-                extension='.tsv',
+                extensions=('.tab','.tsv'),
                 include_pos=params['include_pos'],
                 include_lemma=params['include_lemma'],
                 include_morph=params['include_morph'],
@@ -239,7 +239,7 @@ class Tagger():
             embed_data = utils.load_annotated_dir(
                 embed,
                 format='tab',
-                extension='.tab',
+                extensions=('.tab','.tsv'),
                 include_pos=False,
                 include_lemma=False,
                 include_morph=False,

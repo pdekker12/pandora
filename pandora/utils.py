@@ -14,7 +14,7 @@ PAD, EOS, BOS, UNK = '<PAD>', '<EOS>', '<BOS>', '<UNK>'
 
 
 def load_annotated_dir(directory='directory', format='tab',
-                       extension='.txt', nb_instances=None,
+                       extensions='.txt', nb_instances=None,
                        include_lemma=True, include_morph=True,
                        include_pos=True, col_pos=None, col_lemma=None):
 
@@ -70,7 +70,7 @@ def load_annotated_dir(directory='directory', format='tab',
         for name in sorted(files):
             filepath = os.path.join(root, name)
 
-            if not filepath.endswith(extension):
+            if not filepath.endswith(extensions):
                 continue
 
             insts = load_annotated_file(filepath=filepath,
