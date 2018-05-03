@@ -720,6 +720,7 @@ class Tagger():
         if self.include_lemma:
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                 predictions=train_preds['lemma_out'])
+            print(pred_lemmas)
             score_dict['train_lemma'] = evaluation.single_label_accuracies(
                 gold=self.train_lemmas,
                 silver=pred_lemmas,
