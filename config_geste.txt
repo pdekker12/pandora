@@ -31,3 +31,4 @@ model = Keras
 lr = 0.01
 col_lemma=1
 col_pos=2
+col_morph=3

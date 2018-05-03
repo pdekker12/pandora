@@ -55,7 +55,8 @@ class Tagger():
                  model='Keras',
                  test_batch_size=None,
                  col_pos=None,
-                 col_lemma=None):
+                 col_lemma=None,
+                 col_morph=None):
 
         # initialize:
         self.setup = False
@@ -192,6 +193,8 @@ class Tagger():
             params["col_pos"] = None
         if "col_lemma" not in params:
             params["col_lemma"] = None
+        if "col_morph" not in params:
+            params["col_morph"] = None
 
         if verbose:
             print("::: Loaded Config :::")
@@ -207,7 +210,8 @@ class Tagger():
             include_morph=params['include_morph'],
             nb_instances=None,
             col_pos = int(params["col_pos"]) if params["col_pos"] is not None else None,
-            col_lemma = int(params["col_lemma"]) if params["col_lemma"] is not None else None
+            col_lemma = int(params["col_lemma"]) if params["col_lemma"] is not None else None,
+            col_morph = int(params["col_morph"]) if params["col_morph"] is not None else None
         )
 
         if not len(train_data.keys()) or \
@@ -228,7 +232,8 @@ class Tagger():
                 include_morph=params['include_morph'],
                 nb_instances=None,
                 col_pos = int(params["col_pos"]) if params["col_pos"] is not None else None,
-            col_lemma = int(params["col_lemma"]) if params["col_lemma"] is not None else None
+                col_lemma = int(params["col_lemma"]) if params["col_lemma"] is not None else None,
+                col_morph = int(params["col_morph"]) if params["col_morph"] is not None else None
             )
             if not len(dev_data.keys()) or \
                     not len(dev_data[list(dev_data.keys())[0]]):
@@ -245,7 +250,8 @@ class Tagger():
                 include_morph=params['include_morph'],
                 nb_instances=None,
                 col_pos = int(params["col_pos"]) if params["col_pos"] is not None else None,
-            col_lemma = int(params["col_lemma"]) if params["col_lemma"] is not None else None
+                col_lemma = int(params["col_lemma"]) if params["col_lemma"] is not None else None,
+                col_morph = int(params["col_morph"]) if params["col_morph"] is not None else None
             )
             if not len(test_data.keys()) or \
                     not len(test_data[list(test_data.keys())[0]]):
