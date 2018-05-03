@@ -168,9 +168,26 @@ class Tagger():
         if verbose:
             print('::: started :::')
 
-        params = utils.get_param_dict(config_path)
+        orig_params = utils.get_param_dict(config_path)
+        params = {
+            k: v
+            for k, v in orig_params.items()
+            if v is not None and k not in ["pretrainer_nb_workers"]
+        }
         params['config_path'] = config_path
-        params.update({k: v for k, v in kwargs.items() if v is not None and k not in ["pretrainer_nb_workers"]})
+        params.update({
+            k: v
+            for k, v in kwargs.items()
+            if v is not None and k not in ["pretrainer_nb_workers"]
+        })
+
+        nb_pretrainer_workers = int(kwargs.get(
+            "pretrainer_nb_workers",
+            orig_params.get(
+                "pretrainer_nb_workers",
+                Pretrainer.DEFAULT_NB_WORKERS
+            )
+        ))
         if "col_pos" not in params:
             params["col_pos"] = None
         if "col_lemma" not in params:
@@ -258,15 +275,19 @@ class Tagger():
                 shutil.copy(tagger.config_path, os.sep.join((tagger.model_dir, 'config_original.txt')))
                 if verbose:
                     print('Warning: current config file will be overwritten. Saving it to config_original.txt')
-            tagger.setup_to_train(build=False, **data_sets)
+            tagger.setup_to_train(
+                build=False,
+                nb_pretrainer_workers=nb_pretrainer_workers,
+                **data_sets
+            )
             tagger.curr_nb_epochs = int(params['curr_nb_epochs'])
             if verbose:
                 print("restart from epoch " + str(tagger.curr_nb_epochs) + "...")
             tagger.setup = True
         else:
-            tagger = Tagger(**params)
+            tagger = Tagger(**{k: v for k, v in params.items()})
             tagger.setup_to_train(
-                nb_pretrainer_workers=kwargs.get("pretrainer_nb_workers", Pretrainer.DEFAULT_NB_WORKERS),
+                nb_pretrainer_workers=nb_pretrainer_workers,
                 **data_sets
             )
 
@@ -299,7 +320,8 @@ class Tagger():
         if self.include_lemma:
             print('Loading known lemmas...')
             lemmas_path = os.sep.join((self.model_dir, 'known_lemmas.txt'))
-            self.known_lemmas = set([l.strip() for l in open(lemmas_path, 'r')])
+            with open(lemmas_path, 'r') as f:
+                self.known_lemmas = set([l.strip() for l in f.readlines()])
 
     def setup_to_train(self, train_data=None, dev_data=None, test_data=None, embed_data=None,
                        build=True, nb_pretrainer_workers=None):
@@ -358,7 +380,6 @@ class Tagger():
 
         self.max_token_len = self.preprocessor.max_token_len
         self.max_lemma_len = self.preprocessor.max_lemma_len
-
         self.pretrainer = Pretrainer(nb_left_tokens=self.nb_left_tokens,
                                      nb_right_tokens=self.nb_right_tokens,
                                      size=self.nb_embedding_dims,
@@ -635,6 +656,8 @@ class Tagger():
             F.write('char_embed_dim = '+str(self.char_embed_dim)+'\n')
             F.write('test_batch_size = '+str(self.test_batch_size)+'\n')
             F.write('model = '+str(self.model.CONFIG_KEY)+'\n')
+            if self.pretrainer:
+                F.write('pretrainer_nb_workers = '+str(self.pretrainer.nb_workers)+'\n')
             if hasattr(self, "curr_nb_epochs"):
                 F.write('curr_nb_epochs = '+str(self.curr_nb_epochs)+'\n')
 
@@ -720,7 +743,6 @@ class Tagger():
         if self.include_lemma:
             pred_lemmas = self.preprocessor.inverse_transform_lemmas(
                 predictions=train_preds['lemma_out'])
-            print(pred_lemmas)
             score_dict['train_lemma'] = evaluation.single_label_accuracies(
                 gold=self.train_lemmas,
                 silver=pred_lemmas,

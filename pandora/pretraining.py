@@ -300,9 +300,10 @@ class Pretrainer:
         self.nb_right_tokens = nb_right_tokens
 
         self.token_idx = {}
-        for line in open(os.sep.join((model_dir, 'token_idx.txt')), 'r'):
-            tok, idx = line.strip().split()
-            self.token_idx[tok] = int(idx)
+        with open(os.sep.join((model_dir, 'token_idx.txt')), 'r') as f:
+            for line in f.readlines():
+                tok, idx = line.strip().split()
+                self.token_idx[tok] = int(idx)
 
         # create an ordered vocab:
         self.train_token_vocab = [k for k, v in sorted(

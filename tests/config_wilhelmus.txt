@@ -25,3 +25,4 @@ nb_epochs = 150
 halve_lr_at = 50
 max_token_len = 15
 min_lem_cnt = 1
+pretrainer_nb_workers = 1

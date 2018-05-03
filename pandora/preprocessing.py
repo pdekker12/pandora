@@ -696,9 +696,10 @@ class Preprocessor(object):
 
         self.token_char_lookup = {}
         path = os.sep.join((model_dir, 'token_char_lookup.txt'))
-        for line in open(path, 'r'):
-            c, idx = line.strip().split()
-            self.token_char_lookup[c] = int(idx)
+        with open(path, "r") as f:
+            for line in f.readlines():
+                c, idx = line.strip().split()
+                self.token_char_lookup[c] = int(idx)
         self.token_char_vocab = tuple(sorted(self.token_char_lookup.keys()))
 
         if self.include_pos:

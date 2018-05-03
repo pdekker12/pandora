@@ -164,29 +164,30 @@ def load_annotated_file(filepath='text.txt', format='tab',
     if include_morph:
         instances['morph'] = []
     if format == 'conll':
-        for line in codecs.open(filepath, 'r', 'utf8'):
-            line = line.strip()
+        with codecs.open(filepath, 'r', 'utf8') as f:
+            for line in f.readlines():
+                line = line.strip()
 
-            if line:
-                try:
-                    idx, tok, _, lem, _, pos, morph = \
-                        line.split()[:7]
-                    print(idx, tok, lem, pos)
-                    if include_lemma:
-                        lem = lem.lower().strip().replace(' ', '')
-                    tok = tok.strip().replace('~', '').replace(' ', '')
-                    instances['token'].append(tok)
-                    if include_lemma:
-                        instances['lemma'].append(lem)
-                    if include_pos:
-                        instances['pos'].append(pos)
-                    if include_morph:
-                        instances['morph'].append(morph)
-                except ValueError:
-                    pass
-            if nb_instances:
-                if len(instances) >= nb_instances:
-                    break
+                if line:
+                    try:
+                        idx, tok, _, lem, _, pos, morph = \
+                            line.split()[:7]
+                        print(idx, tok, lem, pos)
+                        if include_lemma:
+                            lem = lem.lower().strip().replace(' ', '')
+                        tok = tok.strip().replace('~', '').replace(' ', '')
+                        instances['token'].append(tok)
+                        if include_lemma:
+                            instances['lemma'].append(lem)
+                        if include_pos:
+                            instances['pos'].append(pos)
+                        if include_morph:
+                            instances['morph'].append(morph)
+                    except ValueError:
+                        pass
+                if nb_instances:
+                    if len(instances) >= nb_instances:
+                        break
 
     elif format == 'tab':
         # Defaults
