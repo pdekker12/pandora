@@ -274,11 +274,13 @@ def load_unannotated_file(filepath='test.txt',
                     break
         return tokens
     else:
-        from nltk.tokenize import wordpunct_tokenize
+        #from nltk.tokenize import wordpunct_tokenize
         W = re.compile(r'\s+')
         with codecs.open(filepath, 'r', 'utf8') as f:
             text = W.sub(f.read(), ' ')
-        tokens = wordpunct_tokenize(text)
+        #tokens = wordpunct_tokenize(text)
+        tokens=text.split()
+        
         if nb_instances:
             return tokens[:nb_instances]
         else:
