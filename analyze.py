@@ -16,14 +16,8 @@ parser.add_argument("--gold_col_lemma", type=int, default=2)
 args = parser.parse_args()
 
 # Read file
-df = pd.read_csv(args.input_file, index_col=None,header=None)
-df.columns = ["word"]
+df_tagged = pd.read_csv(args.tagged_file, sep="\t", header=0)
+print(df_tagged)
 
-# Sample n rows
-df = df.sample(n=N_WORDS)
 
-df["question"] = "Geef een synoniem voor dit woord:"
-
-# Write to file
-df.to_csv(args.output_file, index=False)
 
