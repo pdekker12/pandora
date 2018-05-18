@@ -121,7 +121,9 @@ def tag_dir(model, input_dir, output_dir, tokenized_input, string=None, **kwargs
         annotations = tagger.annotate(unseen_tokens)
         keys = list(annotations.keys())
         print("Keys :" + "\t".join(keys))
-        with codecs.open(os.path.join(new_path, filename + ".tsv"), 'w', 'utf8') as f:
+        output_path = os.path.join(new_path, filename + ".tsv")
+        print("Writing annotated file to: " + output_path)
+        with codecs.open(output_path, 'w', 'utf8') as f:
             f.write("\t".join(keys) + "\n")
             for x in zip(*tuple([annotations[k] for k in keys])):
                 f.write('\t'.join(list(x)) + '\n')
