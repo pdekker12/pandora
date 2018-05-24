@@ -1,6 +1,7 @@
 # Script to compare tagged words to gold standard and analyze errors
 
 N_WORDS = 20
+FORMAT = "stanford"
 
 import argparse
 import pandas as pd
@@ -22,14 +23,19 @@ def main():
     parser.add_argument("--gold_col_tokens", type=int, default=0)
     parser.add_argument("--gold_col_pos", type=int, default=1)
     parser.add_argument("--gold_col_lemma", type=int, default=2)
+    parser.add_argument("--format", default=FORMAT, choices=["pandora", "stanford"])
     
     
     args = parser.parse_args()
     
     # Read tagged file
-    df_tagged = pd.read_csv(args.tagged_file, sep="\t", header=0)
-    df_tagged = df_tagged.drop(columns=["lemmas"])
-    df_tagged = df_tagged.rename(columns={"postcorrect_lemmas":"lemmas"})
+    if args.format=="pandora":
+        df_tagged = pd.read_csv(args.tagged_file, sep="\s{2,}|\t+", engine="python", header=0)
+        df_tagged = df_tagged.drop(columns=["lemmas"])
+        df_tagged = df_tagged.rename(columns={"postcorrect_lemmas":"lemmas"})
+    else:
+        df_tagged = pd.read_csv(args.tagged_file, sep="\s{2,}|\t+", engine="python", header=None)
+        df_tagged = df_tagged.rename(columns={0:"tokens", 1: "pos"}) # TODO: parametrize
     # Read gold file
     # Match tab or multiple whitespaces as delimiter
     df_gold = pd.read_csv(args.gold_file, sep="\s{2,}|\t+", engine="python", header=None)
@@ -37,6 +43,8 @@ def main():
     
     # Check if gold and tagged file contain same words
     if not df_tagged["tokens"].equals(df_gold["tokens"]):
+        print(set(df_tagged["tokens"]) - set(df_gold["tokens"]))
+        print(set(df_gold["tokens"]) - set(df_tagged["tokens"]))
         raise IOError("Gold and tagged file do not contain same tokens!")
     
     # Combine dataframes
@@ -44,20 +52,28 @@ def main():
     df_comb = df_comb.loc[:,~df_comb.columns.duplicated()]
     
     # Compute lemmatization and POS tagging accuracy
-    correct_lemma_count = len(df_comb[df_comb["lemmas"]==df_comb["lemmas_gold"]])
-    correct_pos_count = len(df_comb[df_comb["pos"]==df_comb["pos_gold"]])
-    correct_both_count = len(df_comb[(df_comb["pos"]==df_comb["pos_gold"]) & (df_comb["lemmas"]==df_comb["lemmas_gold"])])
     total = len(df_comb)
-    acc_lemma = correct_lemma_count / total
+    correct_pos_count = len(df_comb[df_comb["pos"]==df_comb["pos_gold"]])
     acc_pos = correct_pos_count / total
-    acc_both = correct_both_count / total
-    print("Lemmatization accuracy: " + str(acc_lemma))
     print("POS tagging accuracy: " + str(acc_pos))
-    print("POS&lemma accuracy: " + str(acc_both) + ". Expected (pos*lemma): " + str(acc_lemma*acc_pos))
-    
     # Show analysis of most frequent errors
-    print(error_analysis(df_comb,"lemmas", "lemmas_gold"))
     print(error_analysis(df_comb,"pos", "pos_gold"))
+    
+    # If format is Pandora, also include lemmas
+    if args.format=="pandora":    
+        correct_lemma_count = len(df_comb[df_comb["lemmas"]==df_comb["lemmas_gold"]])
+        correct_both_count = len(df_comb[(df_comb["pos"]==df_comb["pos_gold"]) & (df_comb["lemmas"]==df_comb["lemmas_gold"])])
+        
+        acc_lemma = correct_lemma_count / total
+        
+        acc_both = correct_both_count / total
+        print("Lemmatization accuracy: " + str(acc_lemma))
+        
+        print("POS&lemma accuracy: " + str(acc_both) + ". Expected (pos*lemma): " + str(acc_lemma*acc_pos))
+        
+        # Show analysis of most frequent errors
+        print(error_analysis(df_comb,"lemmas", "lemmas_gold"))
+    
 
 if __name__ == "__main__":
     main()
